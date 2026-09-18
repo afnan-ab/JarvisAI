@@ -18,7 +18,7 @@ class GeminiApiClient(private val apiKey: String) {
         .build()
 
     private val json = "application/json; charset=utf-8".toMediaType()
-    private val model = "gemini-2.0-flash"
+    private val model = "gemini-3.6-flash"
 
     suspend fun sendMessage(
         systemPrompt: String,
