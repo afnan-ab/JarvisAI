@@ -34,8 +34,8 @@ class CommandProcessor(private val context: Context) {
         // --- Open an app by name ---
         Regex("""open (.+)""").find(t)?.let { m ->
             val appName = m.groupValues[1].trim()
-            return if (openApp(appName)) Handled("Opening $appName.")
-            else Handled("I couldn't find an app called $appName on this phone.")
+            return if (openApp(appName)) Result.Handled("Opening $appName.")
+            else Result.Handled("I couldn't find an app called $appName on this phone.")
         }
 
         // --- Call a contact / number ---
@@ -43,12 +43,12 @@ class CommandProcessor(private val context: Context) {
             val target = m.groupValues[1].trim()
             return if (Regex("""[\d+][\d\s-]{5,}""").matches(target)) {
                 dial(target)
-                Handled("Calling $target.")
+                Result.Handled("Calling $target.")
             } else {
                 // Real contact-name lookup needs READ_CONTACTS resolution;
                 // this stub opens the dialer pre-filled so the user confirms.
                 dialSearch(target)
-                Handled("Pulling up the dialer for $target.")
+                Result.Handled("Pulling up the dialer for $target.")
             }
         }
 
@@ -56,7 +56,7 @@ class CommandProcessor(private val context: Context) {
         Regex("""text (\w+) saying (.+)""").find(t)?.let { m ->
             val contact = m.groupValues[1]
             val message = m.groupValues[2]
-            return Handled("I've got \"$message\" ready to send to $contact, but I need a phone number - " +
+            return Result.Handled("I've got \"$message\" ready to send to $contact, but I need a phone number - " +
                 "contact-name resolution isn't wired up in this starter build yet.")
         }
 
@@ -71,23 +71,23 @@ class CommandProcessor(private val context: Context) {
                 else -> hour
             }
             setAlarm(hour24, minute)
-            return Handled("Alarm set for ${"%02d".format(hour24)}:${"%02d".format(minute)}.")
+            return Result.Handled("Alarm set for ${"%02d".format(hour24)}:${"%02d".format(minute)}.")
         }
 
         // --- Search the web ---
         Regex("""search (?:for )?(.+)""").find(t)?.let { m ->
             webSearch(m.groupValues[1])
-            return Handled("Searching for ${m.groupValues[1]}.")
+            return Result.Handled("Searching for ${m.groupValues[1]}.")
         }
 
         // --- Volume ---
-        if (t.contains("volume up")) { adjustVolume(true); return Handled("Turning it up.") }
-        if (t.contains("volume down")) { adjustVolume(false); return Handled("Turning it down.") }
+        if (t.contains("volume up")) { adjustVolume(true); return Result.Handled("Turning it up.") }
+        if (t.contains("volume down")) { adjustVolume(false); return Result.Handled("Turning it down.") }
 
         // --- Camera ---
         if (t.contains("open camera") || t == "take a photo") {
             context.startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return Handled("Opening the camera.")
+            return Result.Handled("Opening the camera.")
         }
 
         return Result.NotACommand
