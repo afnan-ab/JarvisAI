@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.jarvis.assistant"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "0.1"

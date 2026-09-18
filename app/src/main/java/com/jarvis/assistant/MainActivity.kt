@@ -34,12 +34,12 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     // TODO: replace with your real key, loaded securely - do not hardcode in shipped builds.
-    private val apiKey = "YOUR_ANTHROPIC_API_KEY"
+    private val apiKey = "YOUR_GEMINI_API_KEY"
 
     private lateinit var memory: MemoryStore
     private lateinit var emotion: EmotionEngine
     private lateinit var commands: CommandProcessor
-    private lateinit var api: ClaudeApiClient
+    private lateinit var api: GeminiApiClient
     private lateinit var voice: VoiceManager
 
     private lateinit var adapter: ChatAdapter
@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         memory = MemoryStore(this)
         emotion = EmotionEngine(memory)
         commands = CommandProcessor(this)
-        api = ClaudeApiClient(apiKey)
+        api = GeminiApiClient(apiKey)
         voice = VoiceManager(this) { heard -> handleUserInput(heard) }
         voice.init()
 

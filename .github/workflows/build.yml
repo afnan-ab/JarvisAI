@@ -26,9 +26,9 @@ jobs:
 
       - name: Inject API key
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          sed -i "s/YOUR_ANTHROPIC_API_KEY/$ANTHROPIC_API_KEY/" app/src/main/java/com/jarvis/assistant/MainActivity.kt
+          sed -i "s/YOUR_GEMINI_API_KEY/$GEMINI_API_KEY/" app/src/main/java/com/jarvis/assistant/MainActivity.kt
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
