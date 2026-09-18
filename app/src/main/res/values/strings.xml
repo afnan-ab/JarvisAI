@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Jarvis</string>
+    <string name="accessibility_service_description">Lets Jarvis see what\'s on screen and tap things on your behalf when you ask it to. You can turn this off at any time in Settings.</string>
+</resources>
