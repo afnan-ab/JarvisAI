@@ -2,14 +2,17 @@ package com.jarvis.assistant
 
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.AlarmClock
 import android.provider.MediaStore
+import android.provider.Settings as AndroidSettings
 import android.telephony.SmsManager
 
 class CommandProcessor(private val context: Context) {
@@ -56,11 +59,16 @@ class CommandProcessor(private val context: Context) {
     private fun processSingle(raw: String, isStandalone: Boolean): Result {
         val t = raw.trim().lowercase()
 
-        if (t.contains("turn on torch") || t.contains("turn on flashlight") || t == "torch on" || t == "flashlight on") {
+        if (t.contains("battery")) {
+            val pct = getBatteryPercentage()
+            return Result.Handled(if (pct != null) "Your battery is at $pct%." else "I couldn't read the battery level.")
+        }
+
+        if (t.contains("turn on torch") || t.contains("turn on tourch") || t.contains("turn on flashlight") || t == "torch on" || t == "flashlight on") {
             return if (setTorch(true)) Result.Handled("Turning on the torch.")
             else Result.Handled("I couldn't access the flashlight on this device.")
         }
-        if (t.contains("turn off torch") || t.contains("turn off flashlight") || t == "torch off" || t == "flashlight off") {
+        if (t.contains("turn off torch") || t.contains("turn off tourch") || t.contains("turn off flashlight") || t == "torch off" || t == "flashlight off") {
             return if (setTorch(false)) Result.Handled("Turning off the torch.")
             else Result.Handled("I couldn't access the flashlight on this device.")
         }
@@ -131,6 +139,13 @@ class CommandProcessor(private val context: Context) {
         return Result.NotACommand
     }
 
+    private fun getBatteryPercentage(): Int? {
+        val status = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val level = status?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = status?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        return if (level >= 0 && scale > 0) (level * 100 / scale) else null
+    }
+
     private fun gateSensitive(label: String, action: () -> String): Result {
         return if (security.isEnabled()) {
             pendingAction = action
@@ -141,6 +156,11 @@ class CommandProcessor(private val context: Context) {
     }
 
     private fun openAppResult(appName: String): Result {
+        val normalized = normalize(appName)
+        if (normalized == "setting" || normalized == "settings") {
+            context.startActivity(Intent(AndroidSettings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return Result.Handled("Opening Settings.")
+        }
         return if (openApp(appName)) Result.Handled("Opening $appName.")
         else Result.Handled("I couldn't find an app called $appName on this phone.")
     }
