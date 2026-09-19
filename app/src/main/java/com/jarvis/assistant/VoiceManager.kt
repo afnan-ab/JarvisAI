@@ -55,7 +55,6 @@ class VoiceManager(
     }
 
     fun applySettings() {
-        tts?.language = Locale.getDefault()
         val wantMale = settings.getPreferMale()
         val voice = tts?.voices?.firstOrNull {
             it.name.contains(if (wantMale) "male" else "female", ignoreCase = true) &&
@@ -64,6 +63,14 @@ class VoiceManager(
         voice?.let { tts?.voice = it }
         tts?.setPitch(settings.getPitch())
         tts?.setSpeechRate(settings.getRate())
+    }
+
+    private fun containsDevanagari(text: String): Boolean = text.any { it.code in 0x0900..0x097F }
+
+    private fun recognitionLocale(): Locale = when (settings.getRecognitionLang()) {
+        "en-IN" -> Locale("en", "IN")
+        "hi-IN" -> Locale("hi", "IN")
+        else -> Locale.getDefault()
     }
 
     fun startListening() {
@@ -100,7 +107,7 @@ class VoiceManager(
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, recognitionLocale())
         }
         recognizer?.startListening(intent)
     }
@@ -113,6 +120,11 @@ class VoiceManager(
 
     fun speak(text: String, onDone: () -> Unit = {}) {
         if (ttsReady) {
+            val locale = if (containsDevanagari(text)) Locale("hi", "IN") else Locale("en", "IN")
+            val result = tts?.setLanguage(locale)
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                tts?.setLanguage(Locale.getDefault())
+            }
             pendingDoneCallback = onDone
             val id = UUID.randomUUID().toString()
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)

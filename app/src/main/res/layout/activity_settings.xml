@@ -117,6 +117,44 @@
                 android:textColor="#FFFFFF" />
         </RadioGroup>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Recognition language (for voice input)"
+            android:textColor="#5FD3FF"
+            android:textSize="14sp" />
+
+        <RadioGroup
+            android:id="@+id/langGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp">
+
+            <RadioButton
+                android:id="@+id/langAuto"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Auto (phone default)"
+                android:textColor="#FFFFFF"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/langEnglish"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="English (India)"
+                android:textColor="#FFFFFF" />
+
+            <RadioButton
+                android:id="@+id/langHindi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hindi"
+                android:textColor="#FFFFFF" />
+        </RadioGroup>
+
         <Button
             android:id="@+id/testVoiceButton"
             android:layout_width="match_parent"
@@ -130,7 +168,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Note: real on-device voices only - not named personas like other apps may claim, since those need a separate paid cloud service."
+            android:text="Note: if Hindi voice sounds robotic or is silent, go to phone Settings > System > Languages &amp; input > Text-to-speech output > install Hindi voice data."
             android:textColor="#4A5568"
             android:textSize="11sp" />
 

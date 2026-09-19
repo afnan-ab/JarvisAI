@@ -26,6 +26,9 @@ class SettingsActivity : AppCompatActivity() {
         val rateLabel = findViewById<TextView>(R.id.rateLabel)
         val maleRadio = findViewById<RadioButton>(R.id.maleRadio)
         val femaleRadio = findViewById<RadioButton>(R.id.femaleRadio)
+        val langAuto = findViewById<RadioButton>(R.id.langAuto)
+        val langEnglish = findViewById<RadioButton>(R.id.langEnglish)
+        val langHindi = findViewById<RadioButton>(R.id.langHindi)
 
         val savedPitch = settings.getPitch()
         val savedRate = settings.getRate()
@@ -34,6 +37,12 @@ class SettingsActivity : AppCompatActivity() {
         pitchLabel.text = "Pitch: ${(savedPitch * 100).toInt()}%"
         rateLabel.text = "Speed: ${(savedRate * 100).toInt()}%"
         if (settings.getPreferMale()) maleRadio.isChecked = true else femaleRadio.isChecked = true
+
+        when (settings.getRecognitionLang()) {
+            "en-IN" -> langEnglish.isChecked = true
+            "hi-IN" -> langHindi.isChecked = true
+            else -> langAuto.isChecked = true
+        }
 
         fun currentPitch(): Float = 0.5f + (pitchSlider.progress / 100f)
         fun currentRate(): Float = 0.5f + (rateSlider.progress / 100f)
@@ -63,6 +72,10 @@ class SettingsActivity : AppCompatActivity() {
         maleRadio.setOnClickListener { persistAndApply() }
         femaleRadio.setOnClickListener { persistAndApply() }
 
+        langAuto.setOnClickListener { settings.setRecognitionLang("auto") }
+        langEnglish.setOnClickListener { settings.setRecognitionLang("en-IN") }
+        langHindi.setOnClickListener { settings.setRecognitionLang("hi-IN") }
+
         findViewById<Button>(R.id.presetDeep).setOnClickListener {
             pitchSlider.progress = 30; rateSlider.progress = 40
             pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
@@ -83,7 +96,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.testVoiceButton).setOnClickListener {
-            voice.speak("This is how I sound.")
+            voice.speak("This is how I sound. यह मेरी आवाज़ है।")
         }
     }
 

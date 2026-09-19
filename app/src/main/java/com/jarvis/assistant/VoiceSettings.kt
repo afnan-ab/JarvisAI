@@ -8,6 +8,7 @@ class VoiceSettings(context: Context) {
     fun getPitch(): Float = prefs.getFloat("pitch", 0.85f)
     fun getRate(): Float = prefs.getFloat("rate", 0.95f)
     fun getPreferMale(): Boolean = prefs.getBoolean("prefer_male", true)
+    fun getRecognitionLang(): String = prefs.getString("recognition_lang", "auto") ?: "auto"
 
     fun save(pitch: Float, rate: Float, preferMale: Boolean) {
         prefs.edit()
@@ -15,5 +16,9 @@ class VoiceSettings(context: Context) {
             .putFloat("rate", rate)
             .putBoolean("prefer_male", preferMale)
             .apply()
+    }
+
+    fun setRecognitionLang(lang: String) {
+        prefs.edit().putString("recognition_lang", lang).apply()
     }
 }
