@@ -3,24 +3,15 @@ package com.jarvis.assistant
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.AlarmClock
 import android.provider.MediaStore
 import android.telephony.SmsManager
 
-/**
- * Recognizes simple device-control commands in plain text and executes
- * them with standard Android Intents/APIs (the same mechanisms any app
- * uses to place a call, send an SMS, open the camera, etc). Anything not
- * recognized here falls through to the AI chat so it still gets answered
- * conversationally.
- *
- * This is deliberately rule-based and inspectable rather than letting the
- * model call arbitrary system APIs directly - you can see exactly what
- * phrases trigger what real-world actions, and extend the `when` block
- * below with new ones.
- */
 class CommandProcessor(private val context: Context) {
 
     sealed class Result {
@@ -28,40 +19,63 @@ class CommandProcessor(private val context: Context) {
         object NotACommand : Result()
     }
 
-    fun process(text: String): Result {
-        val t = text.trim().lowercase()
+    private val contactsHelper = ContactsHelper(context)
 
-        // --- Open an app by name ---
-        Regex("""open (.+)""").find(t)?.let { m ->
-            val appName = m.groupValues[1].trim()
-            return if (openApp(appName)) Result.Handled("Opening $appName.")
-            else Result.Handled("I couldn't find an app called $appName on this phone.")
+    fun process(text: String): Result {
+        val segments = text.split(Regex("""(?i),| aur | phir | and | then |;"""))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
+        if (segments.size <= 1) {
+            return processSingle(text.trim())
         }
 
-        // --- Call a contact / number ---
-        Regex("""call (.+)""").find(t)?.let { m ->
-            val target = m.groupValues[1].trim()
-            return if (Regex("""[\d+][\d\s-]{5,}""").matches(target)) {
-                dial(target)
-                Result.Handled("Calling $target.")
-            } else {
-                // Real contact-name lookup needs READ_CONTACTS resolution;
-                // this stub opens the dialer pre-filled so the user confirms.
-                dialSearch(target)
-                Result.Handled("Pulling up the dialer for $target.")
+        val replies = mutableListOf<String>()
+        for (segment in segments) {
+            when (val r = processSingle(segment)) {
+                is Result.Handled -> replies.add(r.spokenReply)
+                Result.NotACommand -> return Result.NotACommand
             }
         }
+        return Result.Handled(replies.joinToString(" "))
+    }
 
-        // --- Send a text: "text mom saying I'm on my way" ---
-        Regex("""text (\w+) saying (.+)""").find(t)?.let { m ->
-            val contact = m.groupValues[1]
-            val message = m.groupValues[2]
-            return Result.Handled("I've got \"$message\" ready to send to $contact, but I need a phone number - " +
-                "contact-name resolution isn't wired up in this starter build yet.")
+    private fun processSingle(raw: String): Result {
+        val t = raw.trim().lowercase()
+
+        if (t.contains("turn on torch") || t.contains("turn on flashlight") || t == "torch on" || t == "flashlight on") {
+            return if (setTorch(true)) Result.Handled("Turning on the torch.")
+            else Result.Handled("I couldn't access the flashlight on this device.")
+        }
+        if (t.contains("turn off torch") || t.contains("turn off flashlight") || t == "torch off" || t == "flashlight off") {
+            return if (setTorch(false)) Result.Handled("Turning off the torch.")
+            else Result.Handled("I couldn't access the flashlight on this device.")
         }
 
-        // --- Set an alarm: "set an alarm for 7 30" / "set alarm for 7:30 am" ---
-        Regex("""set (?:an )?alarm for (\d{1,2})[:\s]?(\d{2})?\s*(am|pm)?""").find(t)?.let { m ->
+        if (t.contains("open camera") || t == "take a photo") {
+            context.startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return Result.Handled("Opening the camera.")
+        }
+
+        Regex("""^(.+?) ko (?:whatsapp|message) (?:karo|bhejo) (.+)$""").find(t)?.let { m ->
+            return Result.Handled(sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()))
+        }
+        Regex("""^message (\w+) (.+)$""").find(t)?.let { m ->
+            return Result.Handled(sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()))
+        }
+        Regex("""^text (\w+) saying (.+)$""").find(t)?.let { m ->
+            return Result.Handled(sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()))
+        }
+
+        Regex("""^(.+) ko (?:call|phone) karo$""").find(t)?.let { m -> return callTarget(m.groupValues[1].trim()) }
+        Regex("""^call (.+)$""").find(t)?.let { m -> return callTarget(m.groupValues[1].trim()) }
+
+        Regex("""^(.+) khol do$""").find(t)?.let { m -> return openAppResult(m.groupValues[1].trim()) }
+        Regex("""^(.+) kholo$""").find(t)?.let { m -> return openAppResult(m.groupValues[1].trim()) }
+        Regex("""^(.+) open karo$""").find(t)?.let { m -> return openAppResult(m.groupValues[1].trim()) }
+        Regex("""^open (.+)$""").find(t)?.let { m -> return openAppResult(m.groupValues[1].trim()) }
+
+        Regex("""^set (?:an )?alarm for (\d{1,2})[:\s]?(\d{2})?\s*(am|pm)?$""").find(t)?.let { m ->
             val hour = m.groupValues[1].toInt()
             val minute = m.groupValues[2].toIntOrNull() ?: 0
             val ampm = m.groupValues[3]
@@ -74,30 +88,71 @@ class CommandProcessor(private val context: Context) {
             return Result.Handled("Alarm set for ${"%02d".format(hour24)}:${"%02d".format(minute)}.")
         }
 
-        // --- Search the web ---
-        Regex("""search (?:for )?(.+)""").find(t)?.let { m ->
+        Regex("""^search(?: for)? (.+)$""").find(t)?.let { m ->
             webSearch(m.groupValues[1])
             return Result.Handled("Searching for ${m.groupValues[1]}.")
         }
 
-        // --- Volume ---
         if (t.contains("volume up")) { adjustVolume(true); return Result.Handled("Turning it up.") }
         if (t.contains("volume down")) { adjustVolume(false); return Result.Handled("Turning it down.") }
-
-        // --- Camera ---
-        if (t.contains("open camera") || t == "take a photo") {
-            context.startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return Result.Handled("Opening the camera.")
-        }
 
         return Result.NotACommand
     }
 
+    private fun openAppResult(appName: String): Result {
+        return if (openApp(appName)) Result.Handled("Opening $appName.")
+        else Result.Handled("I couldn't find an app called $appName on this phone.")
+    }
+
+    private fun callTarget(target: String): Result {
+        return if (Regex("""[\d+][\d\s-]{5,}""").matches(target)) {
+            dial(target)
+            Result.Handled("Calling $target.")
+        } else {
+            val number = contactsHelper.findPhoneNumber(target)
+            if (number != null) {
+                dial(number)
+                Result.Handled("Calling $target.")
+            } else {
+                dialSearch(target)
+                Result.Handled("I couldn't find $target in your contacts, so I've opened the dialer.")
+            }
+        }
+    }
+
+    private fun sendWhatsAppMessage(name: String, message: String): String {
+        val number = contactsHelper.findPhoneNumber(name)
+            ?: return "I couldn't find a contact named $name to message."
+        val encoded = Uri.encode(message)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = Uri.parse("https://api.whatsapp.com/send?phone=$number&text=$encoded")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        Handler(Looper.getMainLooper()).postDelayed({
+            AssistantAccessibilityService.instance?.tapByText("send")
+        }, 3000)
+        return "Opening WhatsApp to message $name: \"$message\"."
+    }
+
+    private fun setTorch(on: Boolean): Boolean {
+        return try {
+            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList.firstOrNull() ?: return false
+            cameraManager.setTorchMode(cameraId, on)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun openApp(name: String): Boolean {
         val pm = context.packageManager
-        @Suppress("DEPRECATION") val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        @Suppress("DEPRECATION")
+        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val needle = normalize(name)
         val match = apps.firstOrNull {
-            pm.getApplicationLabel(it).toString().lowercase().contains(name)
+            normalize(pm.getApplicationLabel(it).toString()).contains(needle)
         } ?: return false
         val launchIntent = pm.getLaunchIntentForPackage(match.packageName) ?: return false
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -105,10 +160,12 @@ class CommandProcessor(private val context: Context) {
         return true
     }
 
+    private fun normalize(s: String): String = s.lowercase().replace(Regex("[^a-z0-9]"), "")
+
     private fun dial(number: String) {
         val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent) // requires CALL_PHONE permission granted at runtime
+        context.startActivity(intent)
     }
 
     private fun dialSearch(query: String) {

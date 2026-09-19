@@ -19,14 +19,15 @@ import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
-    private val apiKey = "YOUR_GEMINI_API_KEY"
+    private val apiKey = "YOUR_GROQ_API_KEY"
 
     private lateinit var memory: MemoryStore
     private lateinit var emotion: EmotionEngine
     private lateinit var commands: CommandProcessor
-    private lateinit var api: GeminiApiClient
+    private lateinit var api: GroqApiClient
     private lateinit var voice: VoiceManager
     private lateinit var agent: AgentRunner
+    private lateinit var micButton: ImageButton
 
     private lateinit var adapter: ChatAdapter
     private val messages = mutableListOf<ChatMessage>()
@@ -43,9 +44,12 @@ class MainActivity : AppCompatActivity() {
         memory = MemoryStore(this)
         emotion = EmotionEngine(memory)
         commands = CommandProcessor(this)
-        api = GeminiApiClient(apiKey)
+        api = GroqApiClient(apiKey)
         agent = AgentRunner(api, commands)
-        voice = VoiceManager(this) { heard -> handleUserInput(heard) }
+        voice = VoiceManager(this) { heard ->
+            micButton.setBackgroundResource(R.drawable.mic_bg)
+            handleUserInput(heard)
+        }
         voice.init()
 
         val recycler = findViewById<RecyclerView>(R.id.chatRecycler)
@@ -55,7 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         val input = findViewById<EditText>(R.id.inputField)
         val sendButton = findViewById<ImageButton>(R.id.sendButton)
-        val micButton = findViewById<ImageButton>(R.id.micButton)
+        micButton = findViewById(R.id.micButton)
 
         refreshMoodLabel()
 
@@ -74,6 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         micButton.setOnClickListener {
             requestPermissionsIfNeeded()
+            micButton.setBackgroundResource(R.drawable.mic_bg_active)
             voice.startListening()
         }
 
@@ -99,7 +104,7 @@ class MainActivity : AppCompatActivity() {
                 voice.speak(result.spokenReply)
                 return
             }
-            CommandProcessor.Result.NotACommand -> { /* fall through below */ }
+            CommandProcessor.Result.NotACommand -> {}
         }
 
         if (looksLikeScreenTask(text)) {
