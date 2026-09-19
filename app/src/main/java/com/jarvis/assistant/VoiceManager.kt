@@ -3,30 +3,55 @@ package com.jarvis.assistant
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
+import java.util.UUID
 
 class VoiceManager(
     private val context: Context,
     private val onSpeechResult: (String) -> Unit,
     private val onListenStart: () -> Unit = {},
-    private val onListenEnd: () -> Unit = {}
+    private val onListenEnd: () -> Unit = {},
+    private val onNoSpeechDetected: () -> Unit = {}
 ) {
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private val settings = VoiceSettings(context)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingDoneCallback: (() -> Unit)? = null
 
     fun init() {
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 applySettings()
+                setupUtteranceListener()
                 ttsReady = true
             }
         }
+    }
+
+    private fun setupUtteranceListener() {
+        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                val callback = pendingDoneCallback
+                pendingDoneCallback = null
+                callback?.let { mainHandler.post(it) }
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                val callback = pendingDoneCallback
+                pendingDoneCallback = null
+                callback?.let { mainHandler.post(it) }
+            }
+        })
     }
 
     fun applySettings() {
@@ -34,7 +59,6 @@ class VoiceManager(
         val wantMale = settings.getPreferMale()
         val voice = tts?.voices?.firstOrNull {
             it.name.contains(if (wantMale) "male" else "female", ignoreCase = true) &&
-                !it.name.contains("female", ignoreCase = true) == wantMale &&
                 !it.isNetworkConnectionRequired
         }
         voice?.let { tts?.voice = it }
@@ -55,9 +79,16 @@ class VoiceManager(
                     onListenEnd()
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     val text = matches?.firstOrNull().orEmpty()
-                    if (text.isNotBlank()) onSpeechResult(text)
+                    if (text.isNotBlank()) {
+                        onSpeechResult(text)
+                    } else {
+                        onNoSpeechDetected()
+                    }
                 }
-                override fun onError(error: Int) { onListenEnd() }
+                override fun onError(error: Int) {
+                    onListenEnd()
+                    onNoSpeechDetected()
+                }
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}
@@ -74,9 +105,19 @@ class VoiceManager(
         recognizer?.startListening(intent)
     }
 
-    fun speak(text: String) {
+    fun stopListening() {
+        recognizer?.cancel()
+        recognizer?.destroy()
+        recognizer = null
+    }
+
+    fun speak(text: String, onDone: () -> Unit = {}) {
         if (ttsReady) {
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis_utterance")
+            pendingDoneCallback = onDone
+            val id = UUID.randomUUID().toString()
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
+        } else {
+            onDone()
         }
     }
 

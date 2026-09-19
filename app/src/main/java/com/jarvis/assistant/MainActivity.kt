@@ -5,6 +5,8 @@ import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import android.widget.EditText
@@ -33,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var orb: View
     private lateinit var stateLabel: TextView
     private var pulseAnimator: ObjectAnimator? = null
+    private var appInForeground = false
 
     private lateinit var adapter: ChatAdapter
     private val messages = mutableListOf<ChatMessage>()
@@ -63,7 +66,10 @@ class MainActivity : AppCompatActivity() {
                 handleUserInput(heard)
             },
             onListenStart = { setOrbState("listening") },
-            onListenEnd = { setOrbState("calm") }
+            onListenEnd = { setOrbState("calm") },
+            onNoSpeechDetected = {
+                Handler(Looper.getMainLooper()).postDelayed({ resumeListeningIfNeeded() }, 600)
+            }
         )
         voice.init()
 
@@ -107,7 +113,31 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        appInForeground = true
         voice.applySettings()
+        resumeListeningIfNeeded()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        appInForeground = false
+        voice.stopListening()
+    }
+
+    private fun resumeListeningIfNeeded() {
+        if (!appInForeground) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            voice.startListening()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        resumeListeningIfNeeded()
     }
 
     private fun startPulse() {
@@ -153,7 +183,7 @@ class MainActivity : AppCompatActivity() {
             is CommandProcessor.Result.Handled -> {
                 appendMessage(result.spokenReply, isUser = false)
                 memory.addTurn("assistant", result.spokenReply)
-                voice.speak(result.spokenReply)
+                voice.speak(result.spokenReply) { resumeListeningIfNeeded() }
                 return
             }
             CommandProcessor.Result.NotACommand -> {}
@@ -168,10 +198,9 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     "I ran into an error: ${e.message}"
                 }
-                setOrbState("calm")
                 appendMessage(summary, isUser = false)
                 memory.addTurn("assistant", summary)
-                voice.speak(summary)
+                voice.speak(summary) { resumeListeningIfNeeded() }
             }
             return
         }
@@ -184,10 +213,9 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 "I hit an error reaching the model: ${e.message}"
             }
-            setOrbState("calm")
             appendMessage(reply, isUser = false)
             memory.addTurn("assistant", reply)
-            voice.speak(reply)
+            voice.speak(reply) { resumeListeningIfNeeded() }
         }
     }
 
@@ -240,5 +268,10 @@ class MainActivity : AppCompatActivity() {
 
     fun openAccessibilitySettings() {
         startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        voice.release()
     }
 }

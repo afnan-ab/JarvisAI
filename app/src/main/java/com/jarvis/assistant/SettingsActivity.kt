@@ -17,7 +17,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         settings = VoiceSettings(this)
-        voice = VoiceManager(this, {}, {}, {})
+        voice = VoiceManager(this, {}, {}, {}, {})
         voice.init()
 
         val pitchSlider = findViewById<SeekBar>(R.id.pitchSlider)
