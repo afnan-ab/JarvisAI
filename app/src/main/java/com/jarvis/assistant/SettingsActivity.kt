@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.RadioButton
 import android.widget.SeekBar
+import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
@@ -17,6 +18,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         settings = VoiceSettings(this)
+        val security = SecuritySettings(this)
         voice = VoiceManager(this, {}, {}, {}, {})
         voice.init()
 
@@ -93,6 +95,12 @@ class SettingsActivity : AppCompatActivity() {
             pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
             rateLabel.text = "Speed: ${(currentRate() * 100).toInt()}%"
             persistAndApply()
+        }
+
+        val passphraseField = findViewById<EditText>(R.id.passphraseField)
+        passphraseField.setText(security.getPassphrase())
+        findViewById<Button>(R.id.savePassphraseButton).setOnClickListener {
+            security.setPassphrase(passphraseField.text.toString())
         }
 
         findViewById<Button>(R.id.testVoiceButton).setOnClickListener {

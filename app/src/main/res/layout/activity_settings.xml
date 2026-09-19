@@ -155,6 +155,42 @@
                 android:textColor="#FFFFFF" />
         </RadioGroup>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Security passphrase"
+            android:textColor="#5FD3FF"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Required before Jarvis sends a message or makes a call. Leave empty to disable."
+            android:textColor="#4A5568"
+            android:textSize="11sp" />
+
+        <EditText
+            android:id="@+id/passphraseField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="e.g. open sesame"
+            android:textColorHint="#4A5568"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/input_bg"
+            android:padding="12dp" />
+
+        <Button
+            android:id="@+id/savePassphraseButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Save Passphrase"
+            android:backgroundTint="#161C26"
+            android:textColor="#FFFFFF" />
+
         <Button
             android:id="@+id/testVoiceButton"
             android:layout_width="match_parent"
@@ -168,7 +204,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Note: if Hindi voice sounds robotic or is silent, go to phone Settings > System > Languages &amp; input > Text-to-speech output > install Hindi voice data."
+            android:text="Note: passphrase is a spoken code word, not true voice-ID - anyone who knows it can use it. Real voice biometrics would need a much bigger ML feature."
             android:textColor="#4A5568"
             android:textSize="11sp" />
 

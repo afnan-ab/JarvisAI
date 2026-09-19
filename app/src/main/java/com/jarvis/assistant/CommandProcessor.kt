@@ -20,19 +20,32 @@ class CommandProcessor(private val context: Context) {
     }
 
     private val contactsHelper = ContactsHelper(context)
+    private val security = SecuritySettings(context)
+    private var pendingAction: (() -> String)? = null
 
     fun process(text: String): Result {
+        pendingAction?.let { action ->
+            val ok = security.checkPassphrase(text.trim())
+            val pending = pendingAction
+            pendingAction = null
+            return if (ok) {
+                Result.Handled(pending!!.invoke())
+            } else {
+                Result.Handled("That passphrase didn't match, so I've cancelled that action.")
+            }
+        }
+
         val segments = text.split(Regex("""(?i),| aur | phir | and | then |;"""))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
         if (segments.size <= 1) {
-            return processSingle(text.trim())
+            return processSingle(text.trim(), isStandalone = true)
         }
 
         val replies = mutableListOf<String>()
         for (segment in segments) {
-            when (val r = processSingle(segment)) {
+            when (val r = processSingle(segment, isStandalone = false)) {
                 is Result.Handled -> replies.add(r.spokenReply)
                 Result.NotACommand -> return Result.NotACommand
             }
@@ -40,7 +53,7 @@ class CommandProcessor(private val context: Context) {
         return Result.Handled(replies.joinToString(" "))
     }
 
-    private fun processSingle(raw: String): Result {
+    private fun processSingle(raw: String, isStandalone: Boolean): Result {
         val t = raw.trim().lowercase()
 
         if (t.contains("turn on torch") || t.contains("turn on flashlight") || t == "torch on" || t == "flashlight on") {
@@ -58,17 +71,29 @@ class CommandProcessor(private val context: Context) {
         }
 
         Regex("""^(.+?) ko (?:whatsapp|message) (?:karo|bhejo) (.+)$""").find(t)?.let { m ->
-            return Result.Handled(sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()))
+            return gateSensitive(
+                "message ${m.groupValues[1].trim()}"
+            ) { sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()) }
         }
         Regex("""^message (\w+) (.+)$""").find(t)?.let { m ->
-            return Result.Handled(sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()))
+            return gateSensitive(
+                "message ${m.groupValues[1].trim()}"
+            ) { sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()) }
         }
         Regex("""^text (\w+) saying (.+)$""").find(t)?.let { m ->
-            return Result.Handled(sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()))
+            return gateSensitive(
+                "message ${m.groupValues[1].trim()}"
+            ) { sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()) }
         }
 
-        Regex("""^(.+) ko (?:call|phone) karo$""").find(t)?.let { m -> return callTarget(m.groupValues[1].trim()) }
-        Regex("""^call (.+)$""").find(t)?.let { m -> return callTarget(m.groupValues[1].trim()) }
+        Regex("""^(.+) ko (?:call|phone) karo$""").find(t)?.let { m ->
+            val target = m.groupValues[1].trim()
+            return gateSensitive("call $target") { performCall(target) }
+        }
+        Regex("""^call (.+)$""").find(t)?.let { m ->
+            val target = m.groupValues[1].trim()
+            return gateSensitive("call $target") { performCall(target) }
+        }
 
         Regex("""^(.+) khol do$""").find(t)?.let { m -> return openAppResult(m.groupValues[1].trim()) }
         Regex("""^(.+) kholo$""").find(t)?.let { m -> return openAppResult(m.groupValues[1].trim()) }
@@ -88,9 +113,16 @@ class CommandProcessor(private val context: Context) {
             return Result.Handled("Alarm set for ${"%02d".format(hour24)}:${"%02d".format(minute)}.")
         }
 
-        Regex("""^search(?: for)? (.+)$""").find(t)?.let { m ->
+        Regex("""^(?:google|web) search(?: for)? (.+)$""").find(t)?.let { m ->
             webSearch(m.groupValues[1])
-            return Result.Handled("Searching for ${m.groupValues[1]}.")
+            return Result.Handled("Searching the web for ${m.groupValues[1]}.")
+        }
+
+        if (isStandalone) {
+            Regex("""^search(?: for)? (.+)$""").find(t)?.let { m ->
+                webSearch(m.groupValues[1])
+                return Result.Handled("Searching for ${m.groupValues[1]}.")
+            }
         }
 
         if (t.contains("volume up")) { adjustVolume(true); return Result.Handled("Turning it up.") }
@@ -99,23 +131,32 @@ class CommandProcessor(private val context: Context) {
         return Result.NotACommand
     }
 
+    private fun gateSensitive(label: String, action: () -> String): Result {
+        return if (security.isEnabled()) {
+            pendingAction = action
+            Result.Handled("Before I $label, please say the passphrase.")
+        } else {
+            Result.Handled(action())
+        }
+    }
+
     private fun openAppResult(appName: String): Result {
         return if (openApp(appName)) Result.Handled("Opening $appName.")
         else Result.Handled("I couldn't find an app called $appName on this phone.")
     }
 
-    private fun callTarget(target: String): Result {
+    private fun performCall(target: String): String {
         return if (Regex("""[\d+][\d\s-]{5,}""").matches(target)) {
             dial(target)
-            Result.Handled("Calling $target.")
+            "Calling $target."
         } else {
             val number = contactsHelper.findPhoneNumber(target)
             if (number != null) {
                 dial(number)
-                Result.Handled("Calling $target.")
+                "Calling $target."
             } else {
                 dialSearch(target)
-                Result.Handled("I couldn't find $target in your contacts, so I've opened the dialer.")
+                "I couldn't find $target in your contacts, so I've opened the dialer."
             }
         }
     }
