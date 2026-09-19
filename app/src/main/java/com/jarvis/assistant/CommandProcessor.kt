@@ -95,7 +95,7 @@ class CommandProcessor(private val context: Context) {
 
     fun openApp(name: String): Boolean {
         val pm = context.packageManager
-        val apps = pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
+        @Suppress("DEPRECATION") val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
         val match = apps.firstOrNull {
             pm.getApplicationLabel(it).toString().lowercase().contains(name)
         } ?: return false
