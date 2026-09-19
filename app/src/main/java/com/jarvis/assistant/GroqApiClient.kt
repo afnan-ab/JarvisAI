@@ -18,7 +18,7 @@ class GroqApiClient(private val apiKey: String) {
         .build()
 
     private val json = "application/json; charset=utf-8".toMediaType()
-    private val model = "llama3-8b-8192"
+    private val model = "openai/gpt-oss-20b"
 
     suspend fun sendMessage(
         systemPrompt: String,
