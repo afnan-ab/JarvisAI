@@ -3,24 +3,19 @@ package com.jarvis.assistant
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
-/**
- * This is what lets Jarvis interact with WHATEVER is on screen, not just
- * apps it launches itself - tapping buttons, scrolling, reading text out
- * of other apps' UI. The user has to turn it on manually in
- * Settings > Accessibility > Jarvis (Android blocks apps from silently
- * granting themselves this, for good reason - it's a powerful permission).
- *
- * Kept as a singleton reference so CommandProcessor / MainActivity can
- * reach it once it's running.
- */
+data class ScreenElement(val index: Int, val label: String, val clickable: Boolean, val editable: Boolean)
+
 class AssistantAccessibilityService : AccessibilityService() {
 
     companion object {
         var instance: AssistantAccessibilityService? = null
     }
+
+    private var lastElements: List<AccessibilityNodeInfo> = emptyList()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -32,15 +27,9 @@ class AssistantAccessibilityService : AccessibilityService() {
         instance = null
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Left intentionally quiet by default - wire this up if you want
-        // Jarvis to react to what appears on screen (e.g. read incoming
-        // notifications aloud). Keep it narrow and permission-respecting.
-    }
-
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
-    /** Finds the first clickable node whose visible text/description contains [label] and taps it. */
     fun tapByText(label: String): Boolean {
         val root = rootInActiveWindow ?: return false
         val target = findNodeByText(root, label.lowercase()) ?: return false
@@ -71,7 +60,6 @@ class AssistantAccessibilityService : AccessibilityService() {
         return false
     }
 
-    /** Reads back all visible text on the current screen (rough OCR-free approximation). */
     fun readScreenText(): String {
         val root = rootInActiveWindow ?: return ""
         val sb = StringBuilder()
@@ -84,6 +72,63 @@ class AssistantAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { collectText(it, sb) }
         }
+    }
+
+    /** Enumerates tappable/editable elements on screen for the agent loop, indexed for reference. */
+    fun listInteractiveElements(): List<ScreenElement> {
+        val root = rootInActiveWindow ?: return emptyList()
+        val elements = mutableListOf<ScreenElement>()
+        val refs = mutableListOf<AccessibilityNodeInfo>()
+        collectInteractive(root, elements, refs)
+        lastElements = refs
+        return elements
+    }
+
+    private fun collectInteractive(
+        node: AccessibilityNodeInfo,
+        elements: MutableList<ScreenElement>,
+        refs: MutableList<AccessibilityNodeInfo>
+    ) {
+        val interactive = node.isClickable || node.isEditable || node.isCheckable
+        if (interactive) {
+            val rawLabel = node.text?.toString()
+                ?: node.contentDescription?.toString()
+                ?: node.className?.toString()
+                ?: "element"
+            elements.add(ScreenElement(elements.size, rawLabel.take(60), node.isClickable, node.isEditable))
+            refs.add(node)
+        }
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { collectInteractive(it, elements, refs) }
+        }
+    }
+
+    fun tapElement(index: Int): Boolean {
+        val node = lastElements.getOrNull(index) ?: return false
+        return performClick(node)
+    }
+
+    fun typeIntoElement(index: Int, text: String): Boolean {
+        val node = lastElements.getOrNull(index) ?: return false
+        val args = Bundle()
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+    }
+
+    fun scrollDown(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val scrollable = findScrollable(root) ?: return false
+        return scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+    }
+
+    private fun findScrollable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isScrollable) return node
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                findScrollable(child)?.let { return it }
+            }
+        }
+        return null
     }
 
     fun pressBack() = performGlobalAction(GLOBAL_ACTION_BACK)

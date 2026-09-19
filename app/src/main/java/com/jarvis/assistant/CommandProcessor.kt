@@ -93,7 +93,7 @@ class CommandProcessor(private val context: Context) {
         return Result.NotACommand
     }
 
-    private fun openApp(name: String): Boolean {
+    fun openApp(name: String): Boolean {
         val pm = context.packageManager
         val apps = pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
         val match = apps.firstOrNull {

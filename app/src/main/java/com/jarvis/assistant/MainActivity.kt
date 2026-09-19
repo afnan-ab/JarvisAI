@@ -17,23 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
-/**
- * -----------------------------------------------------------------------
- * SETUP REQUIRED before this compiles into something useful:
- *   1. Put your Anthropic API key below (or better: load it from
- *      local.properties / a secure settings screen - never commit a real
- *      key to source control).
- *   2. After installing the app, go to
- *      Settings > Accessibility > Installed apps > Jarvis > enable it,
- *      so device-control actions that need on-screen interaction work.
- *   3. Grant the runtime permissions the app will prompt for (mic, call,
- *      SMS) - Android requires these to be accepted by the user, an app
- *      can never silently grant them to itself.
- * -----------------------------------------------------------------------
- */
 class MainActivity : AppCompatActivity() {
 
-    // TODO: replace with your real key, loaded securely - do not hardcode in shipped builds.
     private val apiKey = "YOUR_GEMINI_API_KEY"
 
     private lateinit var memory: MemoryStore
@@ -41,9 +26,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var commands: CommandProcessor
     private lateinit var api: GeminiApiClient
     private lateinit var voice: VoiceManager
+    private lateinit var agent: AgentRunner
 
     private lateinit var adapter: ChatAdapter
     private val messages = mutableListOf<ChatMessage>()
+
+    private val screenTaskKeywords = listOf(
+        "open ", "kholo", "khol do", "type ", "search box", "follow", "start", "shuru karo",
+        "tap ", "click ", "scroll", "post ", "like ", "comment", "waha", "wahan"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +44,7 @@ class MainActivity : AppCompatActivity() {
         emotion = EmotionEngine(memory)
         commands = CommandProcessor(this)
         api = GeminiApiClient(apiKey)
+        agent = AgentRunner(api, commands)
         voice = VoiceManager(this) { heard -> handleUserInput(heard) }
         voice.init()
 
@@ -64,11 +56,9 @@ class MainActivity : AppCompatActivity() {
         val input = findViewById<EditText>(R.id.inputField)
         val sendButton = findViewById<ImageButton>(R.id.sendButton)
         val micButton = findViewById<ImageButton>(R.id.micButton)
-        val moodLabel = findViewById<TextView>(R.id.moodLabel)
 
-        moodLabel.text = "Jarvis · ${emotion.moodDescriptor()}"
+        refreshMoodLabel()
 
-        // Replay short-term memory into the chat view on launch.
         memory.recentTurns().forEach { (role, text) ->
             messages.add(ChatMessage(text, isUser = role == "user"))
         }
@@ -91,13 +81,17 @@ class MainActivity : AppCompatActivity() {
         maybePromptAccessibilityService()
     }
 
+    private fun looksLikeScreenTask(text: String): Boolean {
+        val t = text.lowercase()
+        return screenTaskKeywords.any { t.contains(it) }
+    }
+
     private fun handleUserInput(text: String) {
         appendMessage(text, isUser = true)
         memory.addTurn("user", text)
         emotion.registerUserMessage(text)
         refreshMoodLabel()
 
-        // 1. Try it as a device command first.
         when (val result = commands.process(text)) {
             is CommandProcessor.Result.Handled -> {
                 appendMessage(result.spokenReply, isUser = false)
@@ -105,10 +99,24 @@ class MainActivity : AppCompatActivity() {
                 voice.speak(result.spokenReply)
                 return
             }
-            CommandProcessor.Result.NotACommand -> { /* fall through to AI chat */ }
+            CommandProcessor.Result.NotACommand -> { /* fall through below */ }
         }
 
-        // 2. Otherwise, treat it as conversation and call Claude with memory + mood context.
+        if (looksLikeScreenTask(text)) {
+            appendMessage("Working on it...", isUser = false)
+            lifecycleScope.launch {
+                val summary = try {
+                    agent.run(text)
+                } catch (e: Exception) {
+                    "I ran into an error: ${e.message}"
+                }
+                appendMessage(summary, isUser = false)
+                memory.addTurn("assistant", summary)
+                voice.speak(summary)
+            }
+            return
+        }
+
         lifecycleScope.launch {
             val systemPrompt = buildSystemPrompt()
             val reply = try {
@@ -129,11 +137,11 @@ class MainActivity : AppCompatActivity() {
             Your current mood/tone should be: ${emotion.moodDescriptor()}.
             Speak naturally and concisely - replies may be read aloud by text-to-speech,
             so avoid long lists, markdown, or anything that reads awkwardly out loud.
+            You cannot control the phone yourself through plain conversation - only exact
+            recognized commands or the on-screen agent do that. Do not claim you performed
+            a device action unless you are certain a command actually triggered it.
             What you know about the user so far:
             $facts
-
-            If the user tells you a durable fact about themselves worth remembering
-            (their name, a preference, a routine), acknowledge it naturally in your reply.
         """.trimIndent()
     }
 
@@ -143,7 +151,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshMoodLabel() {
-        findViewById<TextView>(R.id.moodLabel).text = "Jarvis · ${emotion.moodDescriptor()}"
+        findViewById<TextView>(R.id.moodLabel).text = emotion.moodDescriptor()
     }
 
     private fun requestPermissionsIfNeeded() {
