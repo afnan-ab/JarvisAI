@@ -18,7 +18,7 @@ class GroqApiClient(private val apiKey: String) {
         .build()
 
     private val json = "application/json; charset=utf-8".toMediaType()
-    private val model = "llama-3.1-8b-instant"
+    private val model = "llama3-8b-8192"
 
     suspend fun sendMessage(
         systemPrompt: String,
