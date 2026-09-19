@@ -4,7 +4,7 @@ import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 class AgentRunner(
-    private val gemini: GeminiApiClient,
+    private val gemini: GroqApiClient,
     private val commands: CommandProcessor
 ) {
     suspend fun run(instruction: String, maxSteps: Int = 10): String {
