@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#05070C">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="JARVIS Voice Profile"
+            android:textColor="#7C5CFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="20dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Presets"
+            android:textColor="#5FD3FF"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/presetDeep"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Deep &amp; Calm"
+            android:backgroundTint="#161C26"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/presetWarm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Warm &amp; Neutral"
+            android:backgroundTint="#161C26"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/presetBright"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:text="Bright &amp; Energetic"
+            android:backgroundTint="#161C26"
+            android:textColor="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/pitchLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pitch: 85%"
+            android:textColor="#5FD3FF"
+            android:textSize="14sp" />
+
+        <SeekBar
+            android:id="@+id/pitchSlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="35" />
+
+        <TextView
+            android:id="@+id/rateLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Speed: 95%"
+            android:textColor="#5FD3FF"
+            android:textSize="14sp" />
+
+        <SeekBar
+            android:id="@+id/rateSlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="45" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Voice character"
+            android:textColor="#5FD3FF"
+            android:textSize="14sp" />
+
+        <RadioGroup
+            android:id="@+id/genderGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <RadioButton
+                android:id="@+id/maleRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Male"
+                android:textColor="#FFFFFF"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/femaleRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:text="Female"
+                android:textColor="#FFFFFF" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/testVoiceButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Test Voice"
+            android:backgroundTint="#5FD3FF"
+            android:textColor="#05070C" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Note: real on-device voices only - not named personas like other apps may claim, since those need a separate paid cloud service."
+            android:textColor="#4A5568"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+</ScrollView>

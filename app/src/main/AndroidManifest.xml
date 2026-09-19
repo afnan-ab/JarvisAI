@@ -33,6 +33,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="Jarvis Settings" />
+
         <!--
           The AccessibilityService is what lets Jarvis actually see and tap
           things on screen (open apps by name, press back/home, read what's

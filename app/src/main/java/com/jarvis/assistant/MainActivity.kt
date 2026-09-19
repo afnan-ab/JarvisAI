@@ -1,10 +1,12 @@
 package com.jarvis.assistant
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -28,6 +30,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var voice: VoiceManager
     private lateinit var agent: AgentRunner
     private lateinit var micButton: ImageButton
+    private lateinit var orb: View
+    private lateinit var stateLabel: TextView
+    private var pulseAnimator: ObjectAnimator? = null
 
     private lateinit var adapter: ChatAdapter
     private val messages = mutableListOf<ChatMessage>()
@@ -46,10 +51,20 @@ class MainActivity : AppCompatActivity() {
         commands = CommandProcessor(this)
         api = GroqApiClient(apiKey)
         agent = AgentRunner(api, commands)
-        voice = VoiceManager(this) { heard ->
-            micButton.setBackgroundResource(R.drawable.mic_bg)
-            handleUserInput(heard)
-        }
+
+        orb = findViewById(R.id.orb)
+        stateLabel = findViewById(R.id.stateLabel)
+        startPulse()
+
+        voice = VoiceManager(
+            this,
+            onSpeechResult = { heard ->
+                setOrbState("calm")
+                handleUserInput(heard)
+            },
+            onListenStart = { setOrbState("listening") },
+            onListenEnd = { setOrbState("calm") }
+        )
         voice.init()
 
         val recycler = findViewById<RecyclerView>(R.id.chatRecycler)
@@ -60,6 +75,11 @@ class MainActivity : AppCompatActivity() {
         val input = findViewById<EditText>(R.id.inputField)
         val sendButton = findViewById<ImageButton>(R.id.sendButton)
         micButton = findViewById(R.id.micButton)
+        val settingsButton = findViewById<ImageButton>(R.id.settingsButton)
+
+        settingsButton.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         refreshMoodLabel()
 
@@ -78,12 +98,44 @@ class MainActivity : AppCompatActivity() {
 
         micButton.setOnClickListener {
             requestPermissionsIfNeeded()
-            micButton.setBackgroundResource(R.drawable.mic_bg_active)
             voice.startListening()
         }
 
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        voice.applySettings()
+    }
+
+    private fun startPulse() {
+        pulseAnimator?.cancel()
+        pulseAnimator = ObjectAnimator.ofFloat(orb, "alpha", 0.7f, 1f, 0.7f).apply {
+            duration = 2200
+            repeatCount = ObjectAnimator.INFINITE
+            start()
+        }
+    }
+
+    private fun setOrbState(state: String) {
+        when (state) {
+            "listening" -> {
+                orb.setBackgroundResource(R.drawable.orb_listening)
+                stateLabel.text = "Listening..."
+                micButton.setBackgroundResource(R.drawable.mic_bg_active)
+            }
+            "thinking" -> {
+                orb.setBackgroundResource(R.drawable.orb_thinking)
+                stateLabel.text = "Thinking..."
+            }
+            else -> {
+                orb.setBackgroundResource(R.drawable.orb_calm)
+                stateLabel.text = "Calm / Ready"
+                micButton.setBackgroundResource(R.drawable.mic_bg)
+            }
+        }
     }
 
     private fun looksLikeScreenTask(text: String): Boolean {
@@ -108,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (looksLikeScreenTask(text)) {
+            setOrbState("thinking")
             appendMessage("Working on it...", isUser = false)
             lifecycleScope.launch {
                 val summary = try {
@@ -115,6 +168,7 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     "I ran into an error: ${e.message}"
                 }
+                setOrbState("calm")
                 appendMessage(summary, isUser = false)
                 memory.addTurn("assistant", summary)
                 voice.speak(summary)
@@ -122,6 +176,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        setOrbState("thinking")
         lifecycleScope.launch {
             val systemPrompt = buildSystemPrompt()
             val reply = try {
@@ -129,6 +184,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 "I hit an error reaching the model: ${e.message}"
             }
+            setOrbState("calm")
             appendMessage(reply, isUser = false)
             memory.addTurn("assistant", reply)
             voice.speak(reply)
