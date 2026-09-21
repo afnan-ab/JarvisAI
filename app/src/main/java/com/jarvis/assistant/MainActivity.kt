@@ -4,9 +4,11 @@ import android.Manifest
 import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -42,11 +44,20 @@ class MainActivity : AppCompatActivity() {
         "tap ", "click ", "scroll", "post ", "like ", "comment", "waha", "wahan"
     )
 
+    private val rememberPatterns = listOf(
+        Regex("""^remember (?:that )?(.+)$""", RegexOption.IGNORE_CASE),
+        Regex("""^yaad rakho (?:ki )?(.+)$""", RegexOption.IGNORE_CASE),
+        Regex("""^(.+) yaad rakho$""", RegexOption.IGNORE_CASE),
+        Regex("""^(.+) yaad rakhna$""", RegexOption.IGNORE_CASE)
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        showOverLockScreen()
         setContentView(R.layout.activity_main)
 
         memory = MemoryStore(this)
+        memory.clearTurnsOnly()
         emotion = EmotionEngine(memory)
         commands = CommandProcessor(this)
         api = GroqApiClient(apiKey)
@@ -76,17 +87,20 @@ class MainActivity : AppCompatActivity() {
         val sendButton = findViewById<ImageButton>(R.id.sendButton)
         micButton = findViewById(R.id.micButton)
         val settingsButton = findViewById<ImageButton>(R.id.settingsButton)
+        val clearButton = findViewById<ImageButton>(R.id.clearButton)
 
         settingsButton.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        refreshMoodLabel()
-
-        memory.recentTurns().forEach { (role, text) ->
-            messages.add(ChatMessage(text, isUser = role == "user"))
+        clearButton.setOnClickListener {
+            messages.clear()
+            adapter.notifyDataSetChanged()
+            memory.clearTurnsOnly()
+            Toast.makeText(this, "Chat cleared", Toast.LENGTH_SHORT).show()
         }
-        adapter.notifyDataSetChanged()
+
+        refreshMoodLabel()
 
         sendButton.setOnClickListener {
             val text = input.text.toString().trim()
@@ -103,6 +117,46 @@ class MainActivity : AppCompatActivity() {
 
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
+        startWakeWordService()
+        handleWakeWordIntent(intent)
+    }
+
+    private fun showOverLockScreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleWakeWordIntent(intent)
+    }
+
+    private fun handleWakeWordIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra("wake_word_triggered", false) == true) {
+            voice.startListening()
+        }
+    }
+
+    private fun startWakeWordService() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        val serviceIntent = Intent(this, WakeWordService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
     }
 
     override fun onResume() {
@@ -148,8 +202,24 @@ class MainActivity : AppCompatActivity() {
         return screenTaskKeywords.any { t.contains(it) }
     }
 
+    private fun tryRemember(text: String): String? {
+        for (pattern in rememberPatterns) {
+            pattern.find(text.trim())?.let { m -> return m.groupValues[1].trim() }
+        }
+        return null
+    }
+
     private fun handleUserInput(text: String) {
         appendMessage(text, isUser = true)
+
+        tryRemember(text)?.let { fact ->
+            memory.setFact(System.currentTimeMillis().toString(), fact)
+            val reply = "Got it, I'll remember that."
+            appendMessage(reply, isUser = false)
+            voice.speak(reply)
+            return
+        }
+
         memory.addTurn("user", text)
         emotion.registerUserMessage(text)
         refreshMoodLabel()
@@ -201,8 +271,9 @@ class MainActivity : AppCompatActivity() {
         return """
             You are Jarvis, a personal AI assistant living on the user's phone.
             Your current mood/tone should be: ${emotion.moodDescriptor()}.
-            Speak naturally and concisely - replies may be read aloud by text-to-speech,
-            so avoid long lists, markdown, or anything that reads awkwardly out loud.
+            Keep replies short and natural - 1 to 3 sentences unless the user clearly
+            asks for more detail. Replies are read aloud by text-to-speech, so avoid
+            long lists or markdown.
             When replying in Hindi, always write in Devanagari script (हिंदी), never in
             Latin/Hinglish letters - the phone's voice engine can only pronounce Hindi
             correctly when it is in Devanagari. Reply in English when the user writes in
@@ -210,7 +281,7 @@ class MainActivity : AppCompatActivity() {
             You cannot control the phone yourself through plain conversation - only exact
             recognized commands or the on-screen agent do that. Do not claim you performed
             a device action unless you are certain a command actually triggered it.
-            What you know about the user so far:
+            Durable facts the user has explicitly asked you to remember:
             $facts
         """.trimIndent()
     }
@@ -225,16 +296,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermissionsIfNeeded() {
-        val needed = listOf(
+        val permissionList = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CALL_PHONE,
             Manifest.permission.SEND_SMS,
             Manifest.permission.READ_CONTACTS
-        ).filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        )
+        if (Build.VERSION.SDK_INT >= 33) {
+            permissionList.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        val needed = permissionList.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
 
         if (needed.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, needed.toTypedArray(), 1001)
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        startWakeWordService()
     }
 
     private fun maybePromptAccessibilityService() {

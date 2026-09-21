@@ -97,6 +97,11 @@ class MemoryStore(context: Context) {
         persist()
     }
 
+    fun clearTurnsOnly() {
+        root.put("turns", JSONArray())
+        persist()
+    }
+
     fun clearAll() {
         root = JSONObject().apply {
             put("turns", JSONArray())
