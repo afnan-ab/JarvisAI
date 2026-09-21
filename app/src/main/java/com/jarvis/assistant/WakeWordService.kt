@@ -15,6 +15,7 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import java.util.Locale
@@ -28,11 +29,18 @@ class WakeWordService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Toast.makeText(this, "Jarvis wake word service starting...", Toast.LENGTH_SHORT).show()
         try {
             startForegroundWithNotification("Say \"Jarvis\" to wake me up")
         } catch (e: Exception) {
-            stopSelf()
-            return
+            Toast.makeText(this, "Jarvis service failed to start: ${e.message}", Toast.LENGTH_LONG).show()
+            try {
+                val notification = buildNotification("Error: ${e.message}")
+                startForeground(1, notification)
+            } catch (e2: Exception) {
+                stopSelf()
+                return
+            }
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
