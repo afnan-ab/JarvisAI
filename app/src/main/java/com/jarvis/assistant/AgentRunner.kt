@@ -7,7 +7,7 @@ class AgentRunner(
     private val gemini: GroqApiClient,
     private val commands: CommandProcessor
 ) {
-    suspend fun run(instruction: String, maxSteps: Int = 10): String {
+    suspend fun run(instruction: String, maxSteps: Int = 15): String {
         val service = AssistantAccessibilityService.instance
             ?: return "I need the Accessibility permission turned on first - go to Settings > Accessibility > Jarvis and enable it, then try again."
 
@@ -35,6 +35,7 @@ class AgentRunner(
                 {"action":"back"}
                 {"action":"done","summary":"<short summary of what was accomplished, spoken to the user>"}
 
+                Elements list search fields by hint text (e.g. "hint: Search") or id (e.g. "id: search_src_text") when they have no visible label - use those to identify a search box. If the element you need is not in the list, try "scroll" first before giving up.
                 Use "done" once the instruction is complete, or if you're stuck after repeated attempts.
             """.trimIndent()
 

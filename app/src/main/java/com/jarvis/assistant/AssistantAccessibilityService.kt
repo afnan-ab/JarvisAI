@@ -3,6 +3,7 @@ package com.jarvis.assistant
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.os.Build
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -91,11 +92,20 @@ class AssistantAccessibilityService : AccessibilityService() {
     ) {
         val interactive = node.isClickable || node.isEditable || node.isCheckable
         if (interactive) {
-            val rawLabel = node.text?.toString()
-                ?: node.contentDescription?.toString()
-                ?: node.className?.toString()
-                ?: "element"
-            elements.add(ScreenElement(elements.size, rawLabel.take(60), node.isClickable, node.isEditable))
+            val hint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                node.hintText?.toString()
+            } else null
+            val resId = node.viewIdResourceName?.substringAfterLast("/")
+
+            val parts = mutableListOf<String>()
+            node.text?.toString()?.let { if (it.isNotBlank()) parts.add(it) }
+            hint?.let { if (it.isNotBlank()) parts.add("hint: $it") }
+            node.contentDescription?.toString()?.let { if (it.isNotBlank()) parts.add("desc: $it") }
+            resId?.let { if (it.isNotBlank()) parts.add("id: $it") }
+            if (parts.isEmpty()) parts.add(node.className?.toString() ?: "element")
+
+            val label = parts.joinToString(" | ").take(80)
+            elements.add(ScreenElement(elements.size, label, node.isClickable, node.isEditable))
             refs.add(node)
         }
         for (i in 0 until node.childCount) {
