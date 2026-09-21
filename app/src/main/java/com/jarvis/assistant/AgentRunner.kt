@@ -35,6 +35,7 @@ class AgentRunner(
                 {"action":"back"}
                 {"action":"done","summary":"<short summary of what was accomplished, spoken to the user>"}
 
+                If there is no visible text search box on screen yet, look for a search icon or button (often labeled "desc: Search" or a magnifying glass) in a bottom or top navigation bar, and tap that first to navigate to the search screen before trying to type.
                 Elements list search fields by hint text (e.g. "hint: Search") or id (e.g. "id: search_src_text") when they have no visible label - use those to identify a search box. If the element you need is not in the list, try "scroll" first before giving up.
                 Use "done" once the instruction is complete, or if you're stuck after repeated attempts.
             """.trimIndent()
