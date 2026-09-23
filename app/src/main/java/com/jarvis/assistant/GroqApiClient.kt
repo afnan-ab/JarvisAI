@@ -57,4 +57,51 @@ class GroqApiClient(private val apiKey: String) {
             message?.optString("content")?.ifBlank { "(empty response)" } ?: "(empty response)"
         }
     }
+
+    private val visionModel = "qwen/qwen3.8-27b"
+
+    suspend fun sendVisionMessage(
+        systemPrompt: String,
+        imageBase64: String,
+        userText: String
+    ): String = withContext(Dispatchers.IO) {
+
+        val contentArr = JSONArray()
+        contentArr.put(JSONObject().put("type", "text").put("text", userText))
+        contentArr.put(
+            JSONObject().put("type", "image_url").put(
+                "image_url", JSONObject().put("url", "data:image/jpeg;base64,$imageBase64")
+            )
+        )
+
+        val messages = JSONArray()
+        messages.put(JSONObject().put("role", "system").put("content", systemPrompt))
+        messages.put(JSONObject().put("role", "user").put("content", contentArr))
+
+        val body = JSONObject().apply {
+            put("model", visionModel)
+            put("messages", messages)
+            put("max_completion_tokens", 500)
+        }
+
+        val request = Request.Builder()
+            .url("https://api.groq.com/openai/v1/chat/completions")
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("content-type", "application/json")
+            .post(body.toString().toRequestBody(json))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val bodyStr = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                return@withContext "I couldn't reach the vision model (HTTP ${response.code}). ${bodyStr.take(200)}"
+            }
+            val parsed = JSONObject(bodyStr)
+            val choices = parsed.optJSONArray("choices") ?: return@withContext "(empty response)"
+            if (choices.length() == 0) return@withContext "(empty response)"
+            val message = choices.getJSONObject(0).optJSONObject("message")
+            message?.optString("content")?.ifBlank { "(empty response)" } ?: "(empty response)"
+        }
+    }
+
 }

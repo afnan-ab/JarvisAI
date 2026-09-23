@@ -154,3 +154,38 @@ class AssistantAccessibilityService : AccessibilityService() {
         dispatchGesture(gesture, null, null)
     }
 }
+
+    fun captureScreenshot(callback: (android.graphics.Bitmap?) -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            takeScreenshot(
+                android.view.Display.DEFAULT_DISPLAY,
+                mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(result: ScreenshotResult) {
+                        try {
+                            val hwBitmap = android.graphics.Bitmap.wrapHardwareBuffer(
+                                result.hardwareBuffer, result.colorSpace
+                            )
+                            result.hardwareBuffer.close()
+                            val bitmap = hwBitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                            callback(bitmap)
+                        } catch (e: Exception) {
+                            callback(null)
+                        }
+                    }
+                    override fun onFailure(errorCode: Int) {
+                        callback(null)
+                    }
+                }
+            )
+        } else {
+            callback(null)
+        }
+    }
+
+    fun typeIntoFocusedField(text: String): Boolean {
+        val focused = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return false
+        val args = Bundle()
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        return focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+    }

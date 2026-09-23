@@ -1,68 +1,92 @@
 package com.jarvis.assistant
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.media.AudioManager
 import android.os.Build
-import android.os.Bundle
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import java.util.Locale
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
+import org.vosk.android.StorageService
 
-class WakeWordService : Service() {
+class WakeWordService : Service(), RecognitionListener {
 
-    private var recognizer: SpeechRecognizer? = null
+    private var model: Model? = null
+    private var speechService: SpeechService? = null
     private val channelId = "jarvis_wake_word"
-    private val handler = Handler(Looper.getMainLooper())
-    private var running = false
-    private lateinit var audioManager: AudioManager
 
     override fun onCreate() {
         super.onCreate()
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        Toast.makeText(this, "Jarvis wake word service starting...", Toast.LENGTH_SHORT).show()
-        try {
-            startForegroundWithNotification("Say \"Jarvis\" to wake me up")
-        } catch (e: Exception) {
-            Toast.makeText(this, "Jarvis service failed to start: ${e.message}", Toast.LENGTH_LONG).show()
-            try {
-                val notification = buildNotification("Error: ${e.message}")
-                startForeground(1, notification)
-            } catch (e2: Exception) {
-                stopSelf()
-                return
+        startForegroundWithNotification("Loading wake word model...")
+        StorageService.unpack(
+            this, "model-en-us", "model",
+            { loadedModel ->
+                model = loadedModel
+                startListening()
+            },
+            { exception ->
+                updateNotification("Model load failed: ${exception.message}")
             }
-        }
+        )
+    }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            updateNotification("Microphone permission not granted - open Jarvis to fix this")
-            return
+    private fun startListening() {
+        try {
+            val rec = Recognizer(model, 16000.0f)
+            speechService = SpeechService(rec, 16000.0f)
+            speechService?.startListening(this)
+            updateNotification("Say \"Jarvis\" to wake me up")
+        } catch (e: Exception) {
+            updateNotification("Listener error: ${e.message}")
         }
+    }
 
-        running = true
-        listenCycle()
+    override fun onPartialResult(hypothesis: String?) {
+        checkForWakeWord(hypothesis)
+    }
+
+    override fun onResult(hypothesis: String?) {
+        checkForWakeWord(hypothesis)
+    }
+
+    override fun onFinalResult(hypothesis: String?) {
+        checkForWakeWord(hypothesis)
+    }
+
+    private fun checkForWakeWord(hypothesis: String?) {
+        if (hypothesis == null) return
+        try {
+            val json = JSONObject(hypothesis)
+            val text = (json.optString("text", "") + " " + json.optString("partial", "")).lowercase()
+            if (text.contains("jarvis")) {
+                onWakeWordDetected()
+            }
+        } catch (e: Exception) {}
+    }
+
+    override fun onError(exception: Exception?) {
+        updateNotification("Recognition error: ${exception?.message}")
+    }
+
+    override fun onTimeout() {}
+
+    private fun onWakeWordDetected() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            putExtra("wake_word_triggered", true)
+        }
+        startActivity(intent)
     }
 
     private fun startForegroundWithNotification(text: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId, "Jarvis Wake Word", NotificationManager.IMPORTANCE_LOW
-            )
+            val channel = NotificationChannel(channelId, "Jarvis Wake Word", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
         }
         val notification = buildNotification(text)
@@ -82,85 +106,13 @@ class WakeWordService : Service() {
             .build()
 
     private fun updateNotification(text: String) {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager?.notify(1, buildNotification(text))
-    }
-
-    private fun muteFeedbackSounds() {
-        try {
-            audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_MUTE, 0)
-            audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, AudioManager.ADJUST_MUTE, 0)
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0)
-        } catch (e: Exception) {}
-    }
-
-    private fun unmuteFeedbackSounds() {
-        try {
-            audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_UNMUTE, 0)
-            audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, AudioManager.ADJUST_UNMUTE, 0)
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0)
-        } catch (e: Exception) {}
-    }
-
-    private fun listenCycle() {
-        if (!running) return
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            updateNotification("Speech recognition not available on this device")
-            stopSelf()
-            return
-        }
-        try {
-            recognizer?.destroy()
-            recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
-                setRecognitionListener(object : RecognitionListener {
-                    override fun onResults(results: Bundle?) {
-                        unmuteFeedbackSounds()
-                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        val text = matches?.firstOrNull()?.lowercase().orEmpty()
-                        if (text.contains("jarvis")) {
-                            onWakeWordDetected()
-                        }
-                        handler.postDelayed({ listenCycle() }, 400)
-                    }
-                    override fun onError(error: Int) {
-                        unmuteFeedbackSounds()
-                        handler.postDelayed({ listenCycle() }, 800)
-                    }
-                    override fun onReadyForSpeech(params: Bundle?) {}
-                    override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {}
-                    override fun onBufferReceived(buffer: ByteArray?) {}
-                    override fun onEndOfSpeech() {}
-                    override fun onPartialResults(partialResults: Bundle?) {}
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
-                })
-            }
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            }
-            muteFeedbackSounds()
-            recognizer?.startListening(intent)
-        } catch (e: Exception) {
-            unmuteFeedbackSounds()
-            updateNotification("Wake word listener error: ${e.message}")
-            handler.postDelayed({ listenCycle() }, 1500)
-        }
-    }
-
-    private fun onWakeWordDetected() {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            putExtra("wake_word_triggered", true)
-        }
-        startActivity(intent)
+        getSystemService(NotificationManager::class.java)?.notify(1, buildNotification(text))
     }
 
     override fun onDestroy() {
-        running = false
-        unmuteFeedbackSounds()
-        recognizer?.destroy()
+        speechService?.stop()
+        speechService?.shutdown()
+        model?.close()
         super.onDestroy()
     }
 
