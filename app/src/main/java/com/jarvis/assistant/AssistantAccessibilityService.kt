@@ -153,7 +153,6 @@ class AssistantAccessibilityService : AccessibilityService() {
             .build()
         dispatchGesture(gesture, null, null)
     }
-}
 
     fun captureScreenshot(callback: (android.graphics.Bitmap?) -> Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -189,3 +188,4 @@ class AssistantAccessibilityService : AccessibilityService() {
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         return focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
+}

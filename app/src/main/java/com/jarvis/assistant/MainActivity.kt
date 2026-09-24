@@ -117,6 +117,8 @@ class MainActivity : AppCompatActivity() {
 
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
+        promptOverlayPermissionIfNeeded()
+        promptOverlayPermissionIfNeeded()
         startWakeWordService()
         handleWakeWordIntent(intent)
     }
@@ -323,7 +325,20 @@ class MainActivity : AppCompatActivity() {
         startWakeWordService()
     }
 
-    private fun maybePromptAccessibilityService() {
+    private fun promptOverlayPermissionIfNeeded() {
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Enable \"Display over other apps\" for the floating Jarvis bubble to work.", Toast.LENGTH_LONG).show()
+            val intent = Intent(
+                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+        }
+    }
+
+    private fun maybePromptAccessibilityService()
+        promptOverlayPermissionIfNeeded()
+        promptOverlayPermissionIfNeeded() {
         if (AssistantAccessibilityService.instance == null) {
             Toast.makeText(
                 this,

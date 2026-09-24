@@ -5,7 +5,6 @@ import android.os.Build
 import android.util.Base64
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.resume
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 
