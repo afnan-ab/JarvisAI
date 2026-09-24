@@ -119,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         maybePromptAccessibilityService()
         promptOverlayPermissionIfNeeded()
         promptOverlayPermissionIfNeeded()
+        promptOverlayPermissionIfNeeded()
         startWakeWordService()
         handleWakeWordIntent(intent)
     }
@@ -337,6 +338,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun maybePromptAccessibilityService()
+        promptOverlayPermissionIfNeeded()
         promptOverlayPermissionIfNeeded()
         promptOverlayPermissionIfNeeded() {
         if (AssistantAccessibilityService.instance == null) {
