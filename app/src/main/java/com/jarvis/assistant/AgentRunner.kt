@@ -103,7 +103,7 @@ class AgentRunner(
 
     private suspend fun captureScreenshotSuspend(service: AssistantAccessibilityService): Bitmap? =
         suspendCancellableCoroutine { cont ->
-            service.captureScreenshot { bitmap -> cont.resume(bitmap) }
+            service.captureScreenshot { bitmap -> cont.resume(bitmap, null) }
         }
 
     private fun bitmapToBase64(bitmap: Bitmap): String {

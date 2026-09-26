@@ -118,8 +118,6 @@ class MainActivity : AppCompatActivity() {
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
         promptOverlayPermissionIfNeeded()
-        promptOverlayPermissionIfNeeded()
-        promptOverlayPermissionIfNeeded()
         startWakeWordService()
         handleWakeWordIntent(intent)
     }
@@ -337,10 +335,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun maybePromptAccessibilityService()
-        promptOverlayPermissionIfNeeded()
-        promptOverlayPermissionIfNeeded()
-        promptOverlayPermissionIfNeeded() {
+    private fun maybePromptAccessibilityService() {
         if (AssistantAccessibilityService.instance == null) {
             Toast.makeText(
                 this,
