@@ -31,7 +31,11 @@ class WakeWordService : Service(), RecognitionListener {
                 startListening()
             },
             { exception ->
-                updateNotification("Model load failed: ${exception.message}")
+                val msg = "Model load failed: ${exception.message}"
+                updateNotification(msg)
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
+                }
             }
         )
     }
@@ -101,6 +105,7 @@ class WakeWordService : Service(), RecognitionListener {
         NotificationCompat.Builder(this, channelId)
             .setContentTitle("Jarvis")
             .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
             .build()
