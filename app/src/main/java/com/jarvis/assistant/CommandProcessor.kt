@@ -78,20 +78,21 @@ class CommandProcessor(private val context: Context) {
             return Result.Handled("Opening the camera.")
         }
 
-        Regex("""^(.+?) ko (?:whatsapp|message) (?:karo|bhejo) (.+)$""").find(t)?.let { m ->
-            return gateSensitive(
-                "message ${m.groupValues[1].trim()}"
-            ) { sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()) }
+        // WhatsApp messaging is handled by MainActivity's deterministic
+        // Search -> contact row -> chat -> type -> Send flow.
+        // Do not use phone-number/deep-link shortcuts here.
+        if (t.contains("whatsapp") && (t.contains("message") || t.contains("send") || t.contains("bhejo") || t.contains("msg"))) {
+            return Result.NotACommand
         }
-        Regex("""^message (\w+) (.+)$""").find(t)?.let { m ->
-            return gateSensitive(
-                "message ${m.groupValues[1].trim()}"
-            ) { sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()) }
+
+        Regex("""^(.+?) ko (?:whatsapp|message) (?:karo|bhejo) (.+)$""").find(t)?.let {
+            return Result.NotACommand
         }
-        Regex("""^text (\w+) saying (.+)$""").find(t)?.let { m ->
-            return gateSensitive(
-                "message ${m.groupValues[1].trim()}"
-            ) { sendWhatsAppMessage(m.groupValues[1].trim(), m.groupValues[2].trim()) }
+        Regex("""^message (\w+) (.+)$""").find(t)?.let {
+            return Result.NotACommand
+        }
+        Regex("""^text (\w+) saying (.+)$""").find(t)?.let {
+            return Result.NotACommand
         }
 
         Regex("""^(.+) ko (?:call|phone) karo$""").find(t)?.let { m ->
