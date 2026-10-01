@@ -31,6 +31,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var api: GroqApiClient
     private lateinit var voice: VoiceManager
     private lateinit var agent: AgentRunner
+    private lateinit var security: SecuritySettings
+    private var pendingSecureScreenTask: String? = null
     private lateinit var micButton: ImageButton
     private lateinit var orb: View
     private lateinit var stateLabel: TextView
@@ -61,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         memory = MemoryStore(this)
         emotion = EmotionEngine(memory)
         commands = CommandProcessor(this)
+        security = SecuritySettings(this)
         api = GroqApiClient(apiKey)
         agent = AgentRunner(api, commands)
 
@@ -183,6 +186,14 @@ class MainActivity : AppCompatActivity() {
         return screenTaskKeywords.any { t.contains(it) }
     }
 
+    private fun looksLikeSensitiveScreenTask(text: String): Boolean {
+        val t = text.lowercase()
+        return listOf(
+            "message ", "send ", "bhejo", "whatsapp and message",
+            "call ", "phone ", "dial "
+        ).any { t.contains(it) }
+    }
+
     private fun looksLikeMultiStepTask(text: String): Boolean {
         val t = text.trim().lowercase()
         val hasConnector = Regex("""\b(and|then|phir|aur)\b|[,;]""").containsMatchIn(t)
@@ -263,6 +274,19 @@ class MainActivity : AppCompatActivity() {
     private fun handleUserInput(text: String) {
         appendMessage(text, isUser = true)
 
+        pendingSecureScreenTask?.let { pendingTask ->
+            pendingSecureScreenTask = null
+            if (security.checkPassphrase(text)) {
+                runScreenTask(pendingTask)
+            } else {
+                val reply = "That passphrase didn't match, so I cancelled the action."
+                appendMessage(reply, isUser = false)
+                memory.addTurn("assistant", reply)
+                voice.speak(reply)
+            }
+            return
+        }
+
         tryRemember(text)?.let { fact ->
             memory.setFact(System.currentTimeMillis().toString(), fact)
             val reply = "Got it, I'll remember that."
@@ -278,6 +302,16 @@ class MainActivity : AppCompatActivity() {
         // Handle Android settings targets deterministically instead of asking the visual agent
         // to navigate system Settings by coordinates.
         if (handleDeterministicSettings(text)) {
+            return
+        }
+
+        // Sensitive visual tasks must also honor the optional Jarvis passphrase.
+        if (looksLikeMultiStepTask(text) && security.isEnabled() && looksLikeSensitiveScreenTask(text)) {
+            pendingSecureScreenTask = text
+            val reply = "Before I do that, please say the Jarvis passphrase."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
             return
         }
 
