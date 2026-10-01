@@ -246,6 +246,65 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun runWhatsAppTask(text: String) {
+        if (AssistantAccessibilityService.instance == null) {
+            val reply = "Please enable Jarvis in Settings > Accessibility first."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            return
+        }
+
+        val contacts = ContactsHelper(this)
+        val recipient = contacts.findBestDisplayNameInText(text)
+        if (recipient.isNullOrBlank()) {
+            val reply = "I couldn't identify the WhatsApp contact name. Please use the exact saved contact name."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            return
+        }
+
+        val lower = text.lowercase()
+        val start = lower.indexOf(recipient.lowercase())
+        if (start < 0) {
+            val reply = "I couldn't identify the WhatsApp contact name."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            return
+        }
+
+        var message = text.substring(start + recipient.length).trim()
+        message = message
+            .replace(Regex("^(?:and\\s+)?(?:saying|message|with message)\\s+"), "", ignoreCase = true)
+            .trim()
+
+        if (message.isBlank()) {
+            val reply = "Tell me what message to send to $recipient."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            return
+        }
+
+        setOrbState("thinking")
+        appendMessage("Opening WhatsApp Search for $recipient...", isUser = false)
+
+        lifecycleScope.launch {
+            val summary = try {
+                agent.runWhatsAppMessage(recipient, message)
+            } catch (e: Exception) {
+                "I ran into an error: " + e.message
+            }
+            setOrbState("calm")
+            appendMessage(summary, isUser = false)
+            memory.addTurn("assistant", summary)
+            voice.speak(summary)
+        }
+    }
+
     private fun runScreenTask(text: String) {
         if (AssistantAccessibilityService.instance == null) {
             val reply = "Please enable Jarvis in Settings > Accessibility first. I'll need it to control WhatsApp, Instagram, Settings, and other apps."
@@ -323,10 +382,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Multi-step phone tasks go directly to the visual agent.
-        // This prevents the simple parser from misreading:
-        // "open WhatsApp and message X Fnd hi".
-        if (looksLikeMultiStepTask(text) || looksLikeWhatsAppMessageTask(text)) {
+        // WhatsApp messages use a deterministic Search -> contact -> chat -> type -> Send flow.
+        // This avoids asking the vision model to guess coordinates for the most important steps.
+        if (looksLikeWhatsAppMessageTask(text)) {
+            runWhatsAppTask(text)
+            return
+        }
+
+        // Other multi-step phone tasks still use the visual agent.
+        if (looksLikeMultiStepTask(text)) {
             runScreenTask(text)
             return
         }
