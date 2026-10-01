@@ -21,6 +21,7 @@ class AgentRunner(
         }
 
         val actionsTaken = mutableListOf<String>()
+        var consecutiveFailures = 0
 
         repeat(maxSteps) {
             val bitmap = captureScreenshotSuspend(service)
@@ -70,13 +71,32 @@ class AgentRunner(
             when (json.optString("action")) {
                 "open_app" -> {
                     val app = json.optString("app")
-                    commands.openApp(app)
+                    if (!commands.openApp(app)) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed to open $app")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't open $app, so I stopped safely."
+                        }
+                        delay(700)
+                        return@repeat
+                    }
+                    consecutiveFailures = 0
                     actionsTaken.add("opened $app")
+                    delay(700)
                 }
                 "tap" -> {
                     val x = json.optDouble("x", -1.0).toFloat()
                     val y = json.optDouble("y", -1.0).toFloat()
-                    service.tapAt(x, y)
+                    if (x !in 0f..width.toFloat() || y !in 0f..height.toFloat() || !service.tapAt(x, y)) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed tap ($x, $y)")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't perform the requested tap, so I stopped safely."
+                        }
+                        delay(500)
+                        return@repeat
+                    }
+                    consecutiveFailures = 0
                     actionsTaken.add("tapped ($x, $y)")
                     delay(600)
                 }
@@ -84,33 +104,92 @@ class AgentRunner(
                     val x = json.optDouble("x", -1.0).toFloat()
                     val y = json.optDouble("y", -1.0).toFloat()
                     val text = json.optString("text")
-                    service.tapAt(x, y)
+                    if (x !in 0f..width.toFloat() || y !in 0f..height.toFloat()) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed type tap ($x, $y)")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't reach the text field, so I stopped safely."
+                        }
+                        delay(500)
+                        return@repeat
+                    }
+                    if (!service.tapAt(x, y)) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed to focus text field")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't focus the text field, so I stopped safely."
+                        }
+                        delay(500)
+                        return@repeat
+                    }
                     delay(500)
-                    service.typeIntoFocusedField(text)
+                    if (!service.typeIntoFocusedField(text)) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed to type \"$text\"")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't enter the requested text, so I stopped safely."
+                        }
+                        delay(500)
+                        return@repeat
+                    }
+                    consecutiveFailures = 0
                     actionsTaken.add("typed \"$text\" at ($x, $y)")
+                    delay(700)
                 }
                 "send" -> {
                     if (!service.tapByText("send")) {
-                        return "I couldn't find the Send button, so I did not claim the message was sent."
+                        consecutiveFailures++
+                        actionsTaken.add("failed to press Send")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't find the Send button, so I did not claim the message was sent."
+                        }
+                        delay(700)
+                        return@repeat
                     }
+                    consecutiveFailures = 0
                     actionsTaken.add("pressed Send")
                     delay(1200)
                 }
                 "scroll" -> {
-                    service.scrollDown()
+                    if (!service.scrollDown()) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed to scroll")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't scroll this screen, so I stopped safely."
+                        }
+                        delay(500)
+                        return@repeat
+                    }
+                    consecutiveFailures = 0
                     actionsTaken.add("scrolled")
+                    delay(700)
                 }
                 "back" -> {
-                    service.pressBack()
+                    if (!service.pressBack()) {
+                        consecutiveFailures++
+                        actionsTaken.add("failed to press back")
+                        if (consecutiveFailures >= 2) {
+                            return "I couldn't go back from this screen, so I stopped safely."
+                        }
+                        delay(500)
+                        return@repeat
+                    }
+                    consecutiveFailures = 0
                     actionsTaken.add("pressed back")
+                    delay(700)
                 }
                 "done" -> {
                     val summary = json.optString("summary", "Done.")
-                    if (verifyCompletion(instruction, service)) {
+                    if (verifyCompletion(instruction, service, actionsTaken)) {
                         return summary
                     }
+                    consecutiveFailures++
                     actionsTaken.add("agent claimed done, but verification failed")
+                    if (consecutiveFailures >= 2) {
+                        return "The requested task does not look complete yet, so I stopped instead of claiming success."
+                    }
                     delay(700)
+                    return@repeat
                 }
                 else -> return "I wasn't sure how to continue, so I stopped."
             }
@@ -121,7 +200,11 @@ class AgentRunner(
         return "I tried several steps but couldn't finish that fully - want me to keep going?"
     }
 
-    private fun verifyCompletion(instruction: String, service: AssistantAccessibilityService): Boolean {
+    private fun verifyCompletion(
+        instruction: String,
+        service: AssistantAccessibilityService,
+        actionsTaken: List<String>
+    ): Boolean {
         val text = service.readScreenText().lowercase()
         val pkg = service.activePackageName().lowercase()
         val t = instruction.lowercase()
@@ -131,6 +214,7 @@ class AgentRunner(
 
         val appOk = when {
             t.contains("whatsapp") -> appIs("whatsapp")
+
             t.contains("instagram lite") -> appIs("instagram")
             t.contains("instagram") -> appIs("instagram")
             t.contains("settings") -> appIs("settings")
@@ -140,9 +224,8 @@ class AgentRunner(
 
         val contentOk = when {
             Regex("""\b(message|send|bhejo|kaho|saying)\b""").containsMatchIn(t) -> {
-                val msg = Regex("""(?:message|bhejo|kaho|saying)\s+.+?\s+(?:hi|hello|hey|.+)$""")
-                    .find(t)?.value?.substringAfterLast(" ")?.trim()
-                msg.isNullOrBlank() || text.contains(msg)
+                val sent = actionsTaken.any { it == "pressed Send" }
+                sent && (text.isNotBlank() || appOk)
             }
             t.contains("search") -> {
                 val query = Regex("""search(?: for)?\s+(.+?)(?:\s+on it|$)""").find(t)?.groupValues?.getOrNull(1)?.trim()
@@ -249,18 +332,19 @@ class AgentRunner(
             when (json.optString("action")) {
                 "open_app" -> {
                     val app = json.optString("app")
-                    commands.openApp(app)
+                    if (!commands.openApp(app)) return "I couldn't open $app, so I stopped safely."
                     actionsTaken.add("opened $app")
+                    delay(700)
                 }
                 "tap" -> {
                     val idx = json.optInt("index", -1)
-                    service.tapElement(idx)
+                    if (!service.tapElement(idx)) return "I couldn't tap the requested control, so I stopped safely."
                     actionsTaken.add("tapped element $idx")
                 }
                 "type" -> {
                     val idx = json.optInt("index", -1)
                     val text = json.optString("text")
-                    service.typeIntoElement(idx, text)
+                    if (!service.typeIntoElement(idx, text)) return "I couldn't enter the requested text, so I stopped safely."
                     actionsTaken.add("typed \"$text\" into element $idx")
                 }
                 "send" -> {
@@ -271,16 +355,16 @@ class AgentRunner(
                     delay(1200)
                 }
                 "scroll" -> {
-                    service.scrollDown()
+                    if (!service.scrollDown()) return "I couldn't scroll this screen, so I stopped safely."
                     actionsTaken.add("scrolled")
                 }
                 "back" -> {
-                    service.pressBack()
+                    if (!service.pressBack()) return "I couldn't go back from this screen, so I stopped safely."
                     actionsTaken.add("pressed back")
                 }
                 "done" -> {
                     val summary = json.optString("summary", "Done.")
-                    if (verifyCompletion(instruction, service)) {
+                    if (verifyCompletion(instruction, service, actionsTaken)) {
                         return summary
                     }
                     actionsTaken.add("agent claimed done, but verification failed")
