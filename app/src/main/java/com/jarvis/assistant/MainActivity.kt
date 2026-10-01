@@ -126,14 +126,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.settingsQuickButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-
-        clearButton.setOnClickListener {
-            messages.clear()
-            adapter.notifyDataSetChanged()
-            memory.clearTurnsOnly()
-            Toast.makeText(this, "Chat cleared", Toast.LENGTH_SHORT).show()
-        }
-
         refreshMoodLabel()
 
         sendButton.setOnClickListener {
