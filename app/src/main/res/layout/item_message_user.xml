@@ -3,16 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="end"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
-
+    android:paddingStart="8dp"
+    android:paddingTop="5dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="5dp">
     <TextView
         android:id="@+id/bubbleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="60dp"
-        android:background="#2D6CDF"
-        android:padding="12dp"
-        android:textColor="#FFFFFF"
-        android:textSize="15sp" />
+        android:layout_marginStart="54dp"
+        android:background="@drawable/message_user_bg"
+        android:textColor="#EAF8FF"
+        android:textSize="15sp"
+        android:lineSpacingExtra="2dp" />
 </LinearLayout>
