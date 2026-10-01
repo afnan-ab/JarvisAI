@@ -38,7 +38,7 @@ class AgentRunner(
 
         // 3) Tap a non-editable search result containing the exact recipient.
         if (!service.tapTextResult(recipient)) {
-            return "I found the search box, but couldn't select "$recipient" from the results."
+            return "I found the search box, but couldn't select \"$recipient\" from the results."
         }
 
         delay(1200)
@@ -53,12 +53,12 @@ class AgentRunner(
             delay(400)
         }
         if (!composerReady) {
-            return "I selected "$recipient", but the chat composer did not appear."
+            return "I selected \"$recipient\", but the chat composer did not appear."
         }
 
         // 5) Type the exact requested message.
         if (!service.typeIntoFirstEditableField(message)) {
-            return "I opened "$recipient", but couldn't type the message."
+            return "I opened \"$recipient\", but couldn't type the message."
         }
 
         delay(500)
