@@ -233,7 +233,7 @@
             android:layout_weight="1"
             android:background="@android:color/transparent"
             android:hint="  Type a command..."
-            android:hintTextColor="#49687B"
+            android:textColorHint="#49687B"
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="1"
             android:paddingStart="8dp"
