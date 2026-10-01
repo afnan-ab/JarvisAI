@@ -193,12 +193,8 @@ class AgentRunner(
                 return "Agent stopped: ${e.message}"
             }
 
-            val cleaned = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
-            val json = try {
-                JSONObject(cleaned)
-            } catch (e: Exception) {
-                return "I got confused reading the screen and stopped there."
-            }
+            val json = parseAgentJson(raw)
+                ?: return "The agent returned an unreadable action, so I stopped safely."
 
             when (json.optString("action")) {
                 "open_app" -> {
