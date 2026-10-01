@@ -32,6 +32,56 @@ class AssistantAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {}
 
     fun tapByText(label: String): Boolean {
+
+    /**
+     * Clicks a non-editable node whose visible text/content description exactly matches
+     * the supplied label. This avoids clicking the WhatsApp search field itself after
+     * the recipient name has been typed into it.
+     */
+    fun tapExactText(label: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val target = findExactTextNode(root, label.trim().lowercase()) ?: return false
+        return performClick(target)
+    }
+
+    private fun findExactTextNode(
+        node: AccessibilityNodeInfo,
+        label: String
+    ): AccessibilityNodeInfo? {
+        val text = node.text?.toString()?.trim()?.lowercase()
+        val desc = node.contentDescription?.toString()?.trim()?.lowercase()
+        val exact = text == label || desc == label
+        if (exact && !node.isEditable) return node
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findExactTextNode(child, label)?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * Sets text in the first editable node on the current screen.
+     * WhatsApp's chat screen normally exposes only its message composer as editable.
+     */
+    fun typeIntoFirstEditableField(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val field = findEditableNode(root) ?: return false
+        field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        val args = Bundle()
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        return field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+    }
+
+    private fun findEditableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isEditable && node.isEnabled) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findEditableNode(child)?.let { return it }
+        }
+        return null
+    }
+
         val root = rootInActiveWindow ?: return false
         val target = findNodeByText(root, label.lowercase()) ?: return false
         return performClick(target)
