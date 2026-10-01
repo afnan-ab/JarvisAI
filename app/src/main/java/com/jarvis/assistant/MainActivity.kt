@@ -195,6 +195,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runScreenTask(text: String) {
+        if (AssistantAccessibilityService.instance == null) {
+            val reply = "Please enable Jarvis in Settings > Accessibility first. I'll need it to control WhatsApp, Instagram, Settings, and other apps."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            return
+        }
+
         setOrbState("thinking")
         appendMessage("Working on it...", isUser = false)
         lifecycleScope.launch {
