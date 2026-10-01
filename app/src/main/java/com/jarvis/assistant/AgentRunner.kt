@@ -49,11 +49,13 @@ class AgentRunner(
                 {"action":"open_app","app":"<app name>"}
                 {"action":"tap","x":<number>,"y":<number>}
                 {"action":"type","x":<number>,"y":<number>,"text":"<text to type>"}
+                {"action":"send"}
                 {"action":"scroll"}
                 {"action":"back"}
                 {"action":"done","summary":"<short summary spoken to the user>"}
 
                 For "type", tap the field first at the given coordinates, then the text will be entered automatically.
+                For message tasks, after typing the requested message, use "send" to press the visible Send button. Do not use "done" until the message is visibly present in the conversation.
             """.trimIndent()
 
             val raw = try {
@@ -86,6 +88,13 @@ class AgentRunner(
                     delay(500)
                     service.typeIntoFocusedField(text)
                     actionsTaken.add("typed \"$text\" at ($x, $y)")
+                }
+                "send" -> {
+                    if (!service.tapByText("send")) {
+                        return "I couldn't find the Send button, so I did not claim the message was sent."
+                    }
+                    actionsTaken.add("pressed Send")
+                    delay(1200)
                 }
                 "scroll" -> {
                     service.scrollDown()
@@ -220,6 +229,7 @@ class AgentRunner(
                 {"action":"open_app","app":"<app name>"}
                 {"action":"tap","index":<number>}
                 {"action":"type","index":<number>,"text":"<text to type>"}
+                {"action":"send"}
                 {"action":"scroll"}
                 {"action":"back"}
                 {"action":"done","summary":"<short summary spoken to the user>"}
