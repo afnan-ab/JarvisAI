@@ -116,11 +116,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.appsQuickButton).setOnClickListener {
-            Toast.makeText(this, "Say “open WhatsApp”, “open YouTube”, or another app name.", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "apps"))
         }
 
         findViewById<TextView>(R.id.toolsQuickButton).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "menu"))
         }
 
         findViewById<TextView>(R.id.settingsQuickButton).setOnClickListener {
