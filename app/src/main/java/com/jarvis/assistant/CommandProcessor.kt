@@ -208,6 +208,18 @@ class CommandProcessor(private val context: Context) {
     }
 
     fun openApp(name: String): Boolean {
+        val normalized = normalize(name)
+        if (normalized == "setting" || normalized == "settings" || normalized == "androidsettings" || normalized == "systemsettings") {
+            return try {
+                context.startActivity(
+                    Intent(AndroidSettings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+
         val pm = context.packageManager
         @Suppress("DEPRECATION")
         val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
