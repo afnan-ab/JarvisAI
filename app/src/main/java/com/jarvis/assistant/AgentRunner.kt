@@ -62,12 +62,8 @@ class AgentRunner(
                 return "Agent stopped: ${e.message}"
             }
 
-            val cleaned = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
-            val json = try {
-                JSONObject(cleaned)
-            } catch (e: Exception) {
-                return "I got confused reading the screen and stopped there."
-            }
+            val json = parseAgentJson(raw)
+                ?: return "The agent returned an unreadable action, so I stopped safely."
 
             when (json.optString("action")) {
                 "open_app" -> {
@@ -109,6 +105,29 @@ class AgentRunner(
         }
 
         return "I tried several steps but couldn't finish that fully - want me to keep going?"
+    }
+
+    private fun parseAgentJson(raw: String): JSONObject? {
+        val cleaned = raw.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+        try {
+            return JSONObject(cleaned)
+        } catch (_: Exception) {
+            val start = cleaned.indexOf('{')
+            val end = cleaned.lastIndexOf('}')
+            if (start >= 0 && end > start) {
+                try {
+                    return JSONObject(cleaned.substring(start, end + 1))
+                } catch (_: Exception) {
+                    return null
+                }
+            }
+        }
+        return null
     }
 
     private suspend fun captureScreenshotSuspend(service: AssistantAccessibilityService): Bitmap? =
