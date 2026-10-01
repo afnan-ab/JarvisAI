@@ -141,10 +141,29 @@ class AgentRunner(
                 return "Agent stopped: ${e.message}"
             }
 
-            val json = parseAgentJson(raw)
-                ?: return "The agent returned an unreadable action, so I stopped safely."
+            var json = parseAgentJson(raw)
 
-            when (json.optString("action")) {
+            if (json == null || normalizeAgentAction(json.optString("action")) == null) {
+                val retryPrompt = """
+                    Return EXACTLY one valid JSON object and nothing else.
+                    No markdown, no code fence, no explanation.
+                    Allowed actions: open_app, tap, type, send, scroll, back, done.
+                    Current task: $instruction
+                    Steps already taken: ${if (actionsTaken.isEmpty()) "none" else actionsTaken.joinToString("; ")}
+                """.trimIndent()
+                val retryRaw = try {
+                    gemini.sendVisionMessage("JSON ONLY", base64, retryPrompt)
+                } catch (_: Exception) {
+                    ""
+                }
+                json = parseAgentJson(retryRaw)
+            }
+
+            val safeJson = json ?: return "I couldn't understand the next action, so I stopped safely."
+            val normalizedAction = normalizeAgentAction(safeJson.optString("action"))
+                ?: return "I couldn't understand the next action, so I stopped safely."
+
+            when (normalizedAction) {
                 "open_app" -> {
                     val app = json.optString("app")
                     if (!commands.openApp(app)) {
@@ -401,6 +420,19 @@ class AgentRunner(
         }
 
         return appOk && contentOk
+    }
+
+    private fun normalizeAgentAction(action: String): String? {
+        return when (action.trim().lowercase()) {
+            "open_app", "open", "openapp" -> "open_app"
+            "tap", "click" -> "tap"
+            "type", "input", "enter_text" -> "type"
+            "send", "press_send" -> "send"
+            "scroll", "scroll_down" -> "scroll"
+            "back", "go_back" -> "back"
+            "done", "complete", "finished" -> "done"
+            else -> null
+        }
     }
 
     private fun parseAgentJson(raw: String): JSONObject? {
