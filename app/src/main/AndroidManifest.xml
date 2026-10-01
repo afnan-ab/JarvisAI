@@ -39,6 +39,11 @@
             android:exported="false"
             android:label="Jarvis Settings" />
 
+        <activity
+            android:name=".HudScreenActivity"
+            android:exported="false"
+            android:label="Jarvis" />
+
         <!--
           The AccessibilityService is what lets Jarvis actually see and tap
           things on screen (open apps by name, press back/home, read what's
