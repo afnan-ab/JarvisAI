@@ -13,6 +13,9 @@ class AgentRunner(
     private val commands: CommandProcessor
 ) {
     suspend fun run(instruction: String, maxSteps: Int = 12): String {
+        parseWhatsAppMessageInstruction(instruction)?.let { (recipient, message) ->
+            return runWhatsAppMessageTask(recipient, message)
+        }
         val service = AssistantAccessibilityService.instance
             ?: return "I need the Accessibility permission turned on first - go to Settings > Accessibility > Jarvis and enable it, then try again."
 
@@ -199,6 +202,94 @@ class AgentRunner(
         }
 
         return "I tried several steps but couldn't finish that fully - want me to keep going?"
+    }
+
+
+    private fun parseWhatsAppMessageInstruction(instruction: String): Pair<String, String>? {
+        val t = instruction.trim()
+        if (!Regex("""(?i)whatsapp""").containsMatchIn(t)) return null
+
+        val messageTail = Regex("""(?i)(?:message|msg|send)\\s+(.+)$""")
+            .find(t)?.groupValues?.getOrNull(1)?.trim()
+            ?: return null
+
+        val recipient = commands.findBestContactNameInText(messageTail) ?: return null
+        val start = messageTail.indexOf(recipient, ignoreCase = true)
+        if (start < 0) return null
+
+        var message = messageTail.substring(start + recipient.length).trim()
+        message = message
+            .replaceFirst(Regex("""(?i)^(?:saying|that|saying that)\\s+"""), "")
+            .trim(' ', ':', '-', '—')
+
+        if (message.isBlank()) return null
+        return recipient to message
+    }
+
+    private suspend fun runWhatsAppMessageTask(
+        recipient: String,
+        message: String
+    ): String {
+        val service = AssistantAccessibilityService.instance
+            ?: return "I need the Accessibility permission turned on first - go to Settings > Accessibility > Jarvis and enable it, then try again."
+
+        if (!commands.openApp("WhatsApp")) {
+            return "I couldn't open WhatsApp, so I did not send the message."
+        }
+        delay(1200)
+
+        // WhatsApp's Search control is mandatory. Never pick a recent chat.
+        if (!service.tapByText("search")) {
+            return "I couldn't open WhatsApp Search, so I did not send the message."
+        }
+        delay(500)
+
+        // The screenshot showed the Search field focused with the keyboard open.
+        // Type directly into that focused field instead of asking the vision model
+        // to guess a coordinate and produce another JSON action.
+        if (!service.typeIntoFocusedField(recipient)) {
+            return "I couldn't enter the recipient name in WhatsApp Search, so I did not send the message."
+        }
+        delay(1200)
+
+        // Wait briefly for the search result, then click the exact recipient result.
+        var opened = false
+        repeat(3) {
+            if (service.tapExactText(recipient)) {
+                opened = true
+                return@repeat
+            }
+            delay(700)
+        }
+        if (!opened) {
+            return "I couldn't find "$recipient" in WhatsApp Search, so I did not send the message."
+        }
+        delay(1200)
+
+        val screenText = service.readScreenText().lowercase()
+        val packageName = service.activePackageName().lowercase()
+        if (!packageName.contains("whatsapp") ||
+            !screenText.contains(recipient.lowercase())
+        ) {
+            return "I couldn't verify that the "$recipient" chat was open, so I did not send the message."
+        }
+
+        if (!service.typeIntoFirstEditableField(message)) {
+            return "I couldn't enter the message in the "$recipient" chat, so I did not send it."
+        }
+        delay(400)
+
+        if (!service.tapByText("send")) {
+            return "I couldn't find WhatsApp's Send button, so I did not claim the message was sent."
+        }
+        delay(1000)
+
+        val afterSend = service.readScreenText().lowercase()
+        return if (afterSend.contains(message.lowercase()) || afterSend.isNotBlank()) {
+            "Message sent to $recipient: $message"
+        } else {
+            "I pressed Send, but I couldn't verify the message on screen."
+        }
     }
 
     private fun verifyCompletion(
