@@ -97,6 +97,37 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        findViewById<TextView>(R.id.voiceQuickButton).setOnClickListener {
+            requestPermissionsIfNeeded()
+            voice.startListening()
+        }
+
+        findViewById<TextView>(R.id.typeQuickButton).setOnClickListener {
+            input.requestFocus()
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
+
+        findViewById<TextView>(R.id.cameraQuickButton).setOnClickListener {
+            try {
+                startActivity(Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Camera isn't available.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        findViewById<TextView>(R.id.appsQuickButton).setOnClickListener {
+            Toast.makeText(this, "Say “open WhatsApp”, “open YouTube”, or another app name.", Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<TextView>(R.id.toolsQuickButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        findViewById<TextView>(R.id.settingsQuickButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
         clearButton.setOnClickListener {
             messages.clear()
             adapter.notifyDataSetChanged()
