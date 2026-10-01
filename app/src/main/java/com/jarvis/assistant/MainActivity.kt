@@ -193,6 +193,41 @@ class MainActivity : AppCompatActivity() {
         return hasConnector && hasPhoneAction
     }
 
+    private fun handleDeterministicSettings(text: String): Boolean {
+        val t = text.lowercase()
+
+        val action = when {
+            t.contains("accessibility") && (t.contains("settings") || t.contains("setting") || t.contains("open") || t.contains("khol")) ->
+                Settings.ACTION_ACCESSIBILITY_SETTINGS
+            t.contains("developer option") || t.contains("developer options") ->
+                Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+            (t.contains("open settings") || t.contains("open setting") || t.trim() == "settings" || t.trim() == "setting") ->
+                Settings.ACTION_SETTINGS
+            else -> null
+        }
+
+        if (action == null) return false
+
+        return try {
+            startActivity(Intent(action))
+            val reply = when (action) {
+                Settings.ACTION_ACCESSIBILITY_SETTINGS -> "Opening Accessibility settings."
+                Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS -> "Opening Developer options."
+                else -> "Opening Android Settings."
+            }
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            true
+        } catch (_: Exception) {
+            val reply = "I couldn't open that Android settings page on this device."
+            appendMessage(reply, isUser = false)
+            memory.addTurn("assistant", reply)
+            voice.speak(reply)
+            true
+        }
+    }
+
     private fun runScreenTask(text: String) {
         if (AssistantAccessibilityService.instance == null) {
             val reply = "Please enable Jarvis in Settings > Accessibility first. I'll need it to control WhatsApp, Instagram, Settings, and other apps."
@@ -239,6 +274,12 @@ class MainActivity : AppCompatActivity() {
         memory.addTurn("user", text)
         emotion.registerUserMessage(text)
         refreshMoodLabel()
+
+        // Handle Android settings targets deterministically instead of asking the visual agent
+        // to navigate system Settings by coordinates.
+        if (handleDeterministicSettings(text)) {
+            return
+        }
 
         // Multi-step phone tasks go directly to the visual agent.
         // This prevents the simple parser from misreading:
