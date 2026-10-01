@@ -49,17 +49,96 @@ class AssistantAccessibilityService : AccessibilityService() {
         return performClick(target)
     }
 
-    /** Finds WhatsApp's Search control without relying on fixed screen coordinates. */
+    /** Opens WhatsApp Search using stable resource IDs first, then accessibility labels. */
     fun tapSearchControl(): Boolean {
         val root = rootInActiveWindow ?: return false
+
+        findByViewId(root, "com.whatsapp:id/search_bar_inner_layout")
+            .firstOrNull()
+            ?.let { if (performClick(it)) return true }
+
+        findByViewId(root, "com.whatsapp:id/menuitem_search")
+            .firstOrNull()
+            ?.let { if (performClick(it)) return true }
+
         val target = findSearchNode(root) ?: return false
         return performClick(target)
+    }
+
+    fun typeIntoWhatsAppSearch(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val field = findByViewId(root, "com.whatsapp:id/search_input").firstOrNull()
+            ?: findEditableNode(root)
+            ?: return false
+        return setNodeText(field, text)
+    }
+
+    fun typeIntoWhatsAppComposer(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val field = findByViewId(root, "com.whatsapp:id/entry").firstOrNull()
+            ?: findEditableNode(root)
+            ?: return false
+        return setNodeText(field, text)
+    }
+
+    fun hasWhatsAppComposer(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        return findByViewId(root, "com.whatsapp:id/entry").isNotEmpty() ||
+            findEditableNode(root) != null
+    }
+
+    fun tapWhatsAppSearchResult(recipient: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+
+        // Prefer the actual conversation row. Clicking the avatar/profile button
+        // can open contact details instead of the chat.
+        val rows = findByViewId(root, "com.whatsapp:id/contact_row_container")
+        for (row in rows) {
+            val rowText = nodeText(row).lowercase()
+            if (rowText.contains(recipient.trim().lowercase())) {
+                if (performClick(row)) return true
+            }
+        }
+
+        // Newer versions may expose the contact name without the row ID.
+        val nameNodes = findByViewId(root, "com.whatsapp:id/conversations_row_contact_name")
+        for (node in nameNodes) {
+            val text = node.text?.toString()?.trim().orEmpty()
+            if (text.equals(recipient.trim(), ignoreCase = true) ||
+                text.contains(recipient.trim(), ignoreCase = true)
+            ) {
+                if (clickNearestRow(node)) return true
+            }
+        }
+
+        // Fallback: find exact name and deliberately prefer the larger clickable
+        // ancestor rather than an avatar/profile child.
+        val exact = findExactTextNode(root, recipient.trim().lowercase()) ?: return false
+        return clickNearestRow(exact)
+    }
+
+    fun tapWhatsAppSend(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        findByViewId(root, "com.whatsapp:id/send")
+            .firstOrNull()
+            ?.let { if (performClick(it)) return true }
+        return tapByText("send")
     }
 
     /** Types into the first editable field currently exposed by the accessibility tree. */
     fun typeIntoFirstEditableField(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
         val field = findEditableNode(root) ?: return false
+        return setNodeText(field, text)
+    }
+
+    fun hasEditableField(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        return findEditableNode(root) != null
+    }
+
+    private fun setNodeText(field: AccessibilityNodeInfo, text: String): Boolean {
+        if (!field.isEnabled) return false
         field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
         val args = Bundle()
         args.putCharSequence(
@@ -69,9 +148,39 @@ class AssistantAccessibilityService : AccessibilityService() {
         return field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 
-    fun hasEditableField(): Boolean {
-        val root = rootInActiveWindow ?: return false
-        return findEditableNode(root) != null
+    private fun findByViewId(
+        node: AccessibilityNodeInfo,
+        id: String
+    ): List<AccessibilityNodeInfo> {
+        val result = mutableListOf<AccessibilityNodeInfo>()
+        if (node.viewIdResourceName == id) result.add(node)
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { result.addAll(findByViewId(it, id)) }
+        }
+        return result
+    }
+
+    private fun nodeText(node: AccessibilityNodeInfo): String {
+        val sb = StringBuilder()
+        collectText(node, sb)
+        return sb.toString().trim()
+    }
+
+    private fun clickNearestRow(node: AccessibilityNodeInfo): Boolean {
+        var current: AccessibilityNodeInfo? = node
+        var fallback: AccessibilityNodeInfo? = null
+        repeat(7) {
+            val c = current ?: return@repeat
+            if (c.isClickable && c.isEnabled) {
+                val id = c.viewIdResourceName.orEmpty()
+                if (id.endsWith("contact_row_container")) {
+                    return c.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                }
+                if (fallback == null) fallback = c
+            }
+            current = c.parent
+        }
+        return fallback?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
     }
 
     fun screenContainsText(value: String): Boolean {
