@@ -12,6 +12,66 @@ class AgentRunner(
     private val gemini: GroqApiClient,
     private val commands: CommandProcessor
 ) {
+    suspend fun runWhatsAppMessage(recipient: String, message: String): String {
+        val service = AssistantAccessibilityService.instance
+            ?: return "I need the Accessibility permission turned on first."
+
+        if (!commands.openApp("WhatsApp")) {
+            return "I couldn't open WhatsApp."
+        }
+
+        delay(1500)
+
+        // 1) Open WhatsApp's own Search control.
+        if (!service.tapSearchControl()) {
+            return "I couldn't open WhatsApp Search."
+        }
+
+        delay(700)
+
+        // 2) Type the exact recipient name into the Search field.
+        if (!service.typeIntoFirstEditableField(recipient)) {
+            return "I opened WhatsApp Search, but couldn't type the recipient name."
+        }
+
+        delay(1200)
+
+        // 3) Tap a non-editable search result containing the exact recipient.
+        if (!service.tapTextResult(recipient)) {
+            return "I found the search box, but couldn't select "$recipient" from the results."
+        }
+
+        delay(1200)
+
+        // 4) A chat screen should expose an editable message composer.
+        var composerReady = false
+        repeat(5) {
+            if (service.hasEditableField()) {
+                composerReady = true
+                return@repeat
+            }
+            delay(400)
+        }
+        if (!composerReady) {
+            return "I selected "$recipient", but the chat composer did not appear."
+        }
+
+        // 5) Type the exact requested message.
+        if (!service.typeIntoFirstEditableField(message)) {
+            return "I opened "$recipient", but couldn't type the message."
+        }
+
+        delay(500)
+
+        // 6) Press the visible Send control.
+        if (!service.tapByText("send")) {
+            return "I typed the message, but couldn't find the Send button."
+        }
+
+        delay(1000)
+        return "Message sent to $recipient: $message"
+    }
+
     suspend fun run(instruction: String, maxSteps: Int = 12): String {
         parseWhatsAppMessageInstruction(instruction)?.let { (recipient, message) ->
             return runWhatsAppMessageTask(recipient, message)
