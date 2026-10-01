@@ -61,6 +61,8 @@ class AssistantAccessibilityService : AccessibilityService() {
         return false
     }
 
+    fun activePackageName(): String = rootInActiveWindow?.packageName?.toString().orEmpty()
+
     fun readScreenText(): String {
         val root = rootInActiveWindow ?: return ""
         val sb = StringBuilder()
