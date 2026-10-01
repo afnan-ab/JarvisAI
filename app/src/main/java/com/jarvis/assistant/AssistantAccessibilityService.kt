@@ -148,12 +148,13 @@ class AssistantAccessibilityService : AccessibilityService() {
     fun openRecents() = performGlobalAction(GLOBAL_ACTION_RECENTS)
     fun pullDownNotifications() = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
 
-    fun tapAt(x: Float, y: Float) {
+    fun tapAt(x: Float, y: Float): Boolean {
+        if (x < 0f || y < 0f) return false
         val path = Path().apply { moveTo(x, y) }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
             .build()
-        dispatchGesture(gesture, null, null)
+        return dispatchGesture(gesture, null, null)
     }
 
     fun captureScreenshot(callback: (android.graphics.Bitmap?) -> Unit) {
