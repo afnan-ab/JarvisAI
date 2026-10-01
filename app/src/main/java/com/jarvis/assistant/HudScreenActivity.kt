@@ -3,6 +3,8 @@ package com.jarvis.assistant
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -171,7 +173,8 @@ class HudScreenActivity : AppCompatActivity() {
         c.addView(b, LinearLayout.LayoutParams(-1, 68).apply { bottomMargin = 8 })
     }
 
-    private fun list(c: LinearLayout, name: String, kind: String) = card(c, name.uppercase(), kind)
+    private fun list(c: LinearLayout, name: String, kind: String, action: (() -> Unit)? = null) =
+        card(c, name.uppercase(), kind, action)
 
     private fun step(c: LinearLayout, n: String, label: String, done: Boolean) {
         val mark = if (done) "✓" else "○"
