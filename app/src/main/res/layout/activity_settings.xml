@@ -2,211 +2,263 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#05070C">
+    android:background="#02070D">
 
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="20dp">
+        android:padding="16dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="JARVIS Voice Profile"
-            android:textColor="#7C5CFF"
-            android:textSize="20sp"
+            android:text="J A R V I S"
+            android:textColor="#D9FAFF"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:layout_marginBottom="20dp" />
+            android:letterSpacing="0.13"
+            android:shadowColor="#25D8FF"
+            android:shadowRadius="10"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Presets"
-            android:textColor="#5FD3FF"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginTop="2dp"
+            android:text="SYSTEM SETTINGS  //  VOICE &amp; SECURITY"
+            android:textColor="#5C9DB1"
+            android:textSize="8sp"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="14dp"/>
 
-        <Button
-            android:id="@+id/presetDeep"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Deep &amp; Calm"
-            android:backgroundTint="#161C26"
-            android:textColor="#FFFFFF" />
-
-        <Button
-            android:id="@+id/presetWarm"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Warm &amp; Neutral"
-            android:backgroundTint="#161C26"
-            android:textColor="#FFFFFF" />
-
-        <Button
-            android:id="@+id/presetBright"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:text="Bright &amp; Energetic"
-            android:backgroundTint="#161C26"
-            android:textColor="#FFFFFF" />
-
-        <TextView
-            android:id="@+id/pitchLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pitch: 85%"
-            android:textColor="#5FD3FF"
-            android:textSize="14sp" />
-
-        <SeekBar
-            android:id="@+id/pitchSlider"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="35" />
-
-        <TextView
-            android:id="@+id/rateLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Speed: 95%"
-            android:textColor="#5FD3FF"
-            android:textSize="14sp" />
-
-        <SeekBar
-            android:id="@+id/rateSlider"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="45" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Voice character"
-            android:textColor="#5FD3FF"
-            android:textSize="14sp" />
-
-        <RadioGroup
-            android:id="@+id/genderGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <RadioButton
-                android:id="@+id/maleRadio"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Male"
-                android:textColor="#FFFFFF"
-                android:checked="true" />
-
-            <RadioButton
-                android:id="@+id/femaleRadio"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:text="Female"
-                android:textColor="#FFFFFF" />
-        </RadioGroup>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Recognition language (for voice input)"
-            android:textColor="#5FD3FF"
-            android:textSize="14sp" />
-
-        <RadioGroup
-            android:id="@+id/langGroup"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="8dp">
+            android:background="@drawable/glass_panel"
+            android:padding="14dp">
 
-            <RadioButton
-                android:id="@+id/langAuto"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Auto (phone default)"
-                android:textColor="#FFFFFF"
-                android:checked="true" />
+                android:text="VOICE PROFILE"
+                android:textColor="#59DFFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14sp"
+                android:layout_marginBottom="10dp"/>
 
-            <RadioButton
-                android:id="@+id/langEnglish"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="English (India)"
-                android:textColor="#FFFFFF" />
+                android:text="PRESETS"
+                android:textColor="#6D9FB0"
+                android:textSize="8sp"
+                android:layout_marginBottom="6dp"/>
 
-            <RadioButton
-                android:id="@+id/langHindi"
+            <Button
+                android:id="@+id/presetDeep"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginBottom="6dp"
+                android:text="DEEP  /  CALM"
+                android:background="@drawable/action_blue"
+                android:textColor="#DDF8FF"/>
+
+            <Button
+                android:id="@+id/presetWarm"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginBottom="6dp"
+                android:text="WARM  /  NEUTRAL"
+                android:background="@drawable/action_blue"
+                android:textColor="#DDF8FF"/>
+
+            <Button
+                android:id="@+id/presetBright"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:text="BRIGHT  /  ENERGETIC"
+                android:background="@drawable/action_blue"
+                android:textColor="#DDF8FF"/>
+
+            <TextView
+                android:id="@+id/pitchLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hindi"
-                android:textColor="#FFFFFF" />
-        </RadioGroup>
+                android:layout_marginTop="14dp"
+                android:text="PITCH: 85%"
+                android:textColor="#55D9FF"
+                android:textSize="9sp"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Security passphrase"
-            android:textColor="#5FD3FF"
-            android:textSize="14sp" />
+            <SeekBar
+                android:id="@+id/pitchSlider"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:max="100"
+                android:progress="35"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Required before Jarvis sends a message or makes a call. Leave empty to disable."
-            android:textColor="#4A5568"
-            android:textSize="11sp" />
+            <TextView
+                android:id="@+id/rateLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="SPEED: 95%"
+                android:textColor="#55D9FF"
+                android:textSize="9sp"/>
 
-        <EditText
-            android:id="@+id/passphraseField"
+            <SeekBar
+                android:id="@+id/rateSlider"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:max="100"
+                android:progress="45"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="VOICE CHARACTER"
+                android:textColor="#6D9FB0"
+                android:textSize="8sp"/>
+
+            <RadioGroup
+                android:id="@+id/genderGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="2dp">
+
+                <RadioButton
+                    android:id="@+id/maleRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MALE"
+                    android:textColor="#D7F4FC"
+                    android:checked="true"/>
+
+                <RadioButton
+                    android:id="@+id/femaleRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="22dp"
+                    android:text="FEMALE"
+                    android:textColor="#D7F4FC"/>
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="e.g. open sesame"
-            android:textColorHint="#4A5568"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/input_bg"
-            android:padding="12dp" />
+            android:orientation="vertical"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_panel"
+            android:padding="14dp">
 
-        <Button
-            android:id="@+id/savePassphraseButton"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RECOGNITION"
+                android:textColor="#59DFFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14"
+                android:layout_marginBottom="6dp"/>
+
+            <RadioGroup
+                android:id="@+id/langGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/langAuto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AUTO  /  PHONE DEFAULT"
+                    android:textColor="#D7F4FC"
+                    android:checked="true"/>
+
+                <RadioButton
+                    android:id="@+id/langEnglish"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ENGLISH  /  INDIA"
+                    android:textColor="#D7F4FC"/>
+
+                <RadioButton
+                    android:id="@+id/langHindi"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="HINDI"
+                    android:textColor="#D7F4FC"/>
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Save Passphrase"
-            android:backgroundTint="#161C26"
-            android:textColor="#FFFFFF" />
+            android:orientation="vertical"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_panel"
+            android:padding="14dp">
 
-        <Button
-            android:id="@+id/testVoiceButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Test Voice"
-            android:backgroundTint="#5FD3FF"
-            android:textColor="#05070C" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SECURITY PASSPHRASE"
+                android:textColor="#59DFFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14"
+                android:layout_marginBottom="5dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Required before JARVIS sends a message or makes a call."
+                android:textColor="#64818F"
+                android:textSize="9sp"/>
+
+            <EditText
+                android:id="@+id/passphraseField"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="8dp"
+                android:hint="ENTER PASSPHRASE"
+                android:textColorHint="#416779"
+                android:textColor="#EAFBFF"
+                android:background="@drawable/status_pill"
+                android:padding="12dp"/>
+
+            <Button
+                android:id="@+id/savePassphraseButton"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="7dp"
+                android:text="SAVE PASSPHRASE"
+                android:background="@drawable/action_blue"
+                android:textColor="#DDF8FF"/>
+
+            <Button
+                android:id="@+id/testVoiceButton"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="8dp"
+                android:text="TEST VOICE"
+                android:background="@drawable/send_bg"
+                android:textColor="#031018"/>
+        </LinearLayout>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Note: passphrase is a spoken code word, not true voice-ID - anyone who knows it can use it. Real voice biometrics would need a much bigger ML feature."
-            android:textColor="#4A5568"
-            android:textSize="11sp" />
+            android:layout_marginTop="12dp"
+            android:text="NOTE: PASSPHRASE IS A SPOKEN CODE WORD, NOT VOICE ID."
+            android:textColor="#496674"
+            android:textSize="8sp"
+            android:letterSpacing="0.04"
+            android:padding="4dp"/>
 
     </LinearLayout>
 </ScrollView>
