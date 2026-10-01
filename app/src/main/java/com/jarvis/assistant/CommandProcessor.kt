@@ -213,11 +213,39 @@ class CommandProcessor(private val context: Context) {
 
     fun openApp(name: String): Boolean {
         val normalized = normalize(name)
-        if (normalized == "setting" || normalized == "settings" || normalized == "androidsettings" || normalized == "systemsettings") {
+
+        // Real Android system screens are opened with their official intents.
+        val systemIntent = when (normalized) {
+            "setting", "settings", "androidsettings", "systemsettings" ->
+                Intent(AndroidSettings.ACTION_SETTINGS)
+            "wifi", "wireless" ->
+                Intent(AndroidSettings.ACTION_WIFI_SETTINGS)
+            "bluetooth" ->
+                Intent(AndroidSettings.ACTION_BLUETOOTH_SETTINGS)
+            "display", "screen" ->
+                Intent(AndroidSettings.ACTION_DISPLAY_SETTINGS)
+            "sound", "audio", "volume" ->
+                Intent(AndroidSettings.ACTION_SOUND_SETTINGS)
+            "apps", "applications", "installedapps" ->
+                Intent(AndroidSettings.ACTION_APPLICATION_SETTINGS)
+            "notifications" ->
+                Intent(AndroidSettings.ACTION_NOTIFICATION_SETTINGS)
+            "accessibility" ->
+                Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)
+            "developeroptions", "developer" ->
+                Intent(AndroidSettings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+            "battery" ->
+                Intent(AndroidSettings.ACTION_BATTERY_SAVER_SETTINGS)
+            "storage" ->
+                Intent(AndroidSettings.ACTION_INTERNAL_STORAGE_SETTINGS)
+            "location" ->
+                Intent(AndroidSettings.ACTION_LOCATION_SOURCE_SETTINGS)
+            else -> null
+        }
+
+        if (systemIntent != null) {
             return try {
-                context.startActivity(
-                    Intent(AndroidSettings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
+                context.startActivity(systemIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 true
             } catch (_: Exception) {
                 false
@@ -225,13 +253,22 @@ class CommandProcessor(private val context: Context) {
         }
 
         val pm = context.packageManager
-        @Suppress("DEPRECATION")
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val apps = pm.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+            PackageManager.MATCH_ALL
+        )
+
         val needle = normalize(name)
-        val match = apps.firstOrNull {
-            normalize(pm.getApplicationLabel(it).toString()).contains(needle)
-        } ?: return false
-        val launchIntent = pm.getLaunchIntentForPackage(match.packageName) ?: return false
+        val match = apps
+            .map { it.activityInfo.applicationInfo }
+            .distinctBy { it.packageName }
+            .map { app -> app to normalize(pm.getApplicationLabel(app).toString()) }
+            .firstOrNull { (_, label) ->
+                label == needle || label.contains(needle) || needle.contains(label)
+            }
+            ?: return false
+
+        val launchIntent = pm.getLaunchIntentForPackage(match.first.packageName) ?: return false
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(launchIntent)
         return true
