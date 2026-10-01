@@ -3,168 +3,215 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#02060B">
+    android:background="#02070D">
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="#16BFFF"
-        android:alpha="0.8"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="1dp"
+        android:background="#35D9FF"
+        android:alpha="0.85"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="86dp"
+        android:background="@drawable/glass_panel"
+        android:alpha="0.18"
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <TextView
         android:id="@+id/titleLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="22dp"
-        android:text="JARVIS"
-        android:textColor="#35D7FF"
-        android:textSize="29sp"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="17dp"
+        android:text="J A R V I S"
+        android:textColor="#C9F7FF"
+        android:textSize="24sp"
         android:textStyle="bold"
-        android:letterSpacing="0.06"
+        android:letterSpacing="0.13"
+        android:shadowColor="#2BD9FF"
+        android:shadowRadius="9"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <TextView
         android:id="@+id/greetingLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="1dp"
-        android:text="Your Personal AI Assistant"
-        android:textColor="#9BB7C8"
-        android:textSize="11sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="2dp"
+        android:text="PERSONAL AI ASSISTANT  //  ONLINE"
+        android:textColor="#5E9CB1"
+        android:textSize="8sp"
+        android:letterSpacing="0.08"
         app:layout_constraintTop_toBottomOf="@id/titleLabel"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <TextView
+        android:id="@+id/systemChip"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_marginTop="17dp"
+        android:layout_marginEnd="17dp"
+        android:background="@drawable/status_pill"
+        android:gravity="center"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:text="●  SYSTEM ONLINE"
+        android:textColor="#4BEEB0"
+        android:textSize="8sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <ImageButton
         android:id="@+id/settingsButton"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
-        android:layout_marginTop="21dp"
-        android:layout_marginEnd="14dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="51dp"
+        android:layout_marginEnd="15dp"
         android:background="@drawable/glass_panel"
         android:contentDescription="Settings"
+        android:padding="8dp"
         android:src="@android:drawable/ic_menu_manage"
-        android:tint="#D9F6FF"
+        android:tint="#BDEFFF"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <FrameLayout
         android:id="@+id/orbFrame"
-        android:layout_width="190dp"
-        android:layout_height="190dp"
-        android:layout_marginTop="13dp"
+        android:layout_width="224dp"
+        android:layout_height="224dp"
+        android:layout_marginTop="11dp"
         app:layout_constraintTop_toBottomOf="@id/greetingLabel"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <View
-            android:layout_width="190dp"
-            android:layout_height="190dp"
-            android:background="@drawable/orb_calm" />
+            android:layout_width="224dp"
+            android:layout_height="224dp"
+            android:background="@drawable/orb_calm"/>
+
+        <View
+            android:layout_width="188dp"
+            android:layout_height="188dp"
+            android:layout_gravity="center"
+            android:background="@drawable/orb_listening"
+            android:alpha="0.16"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="J"
-            android:textColor="#E6FBFF"
-            android:textSize="58sp"
+            android:textColor="#E9FCFF"
+            android:textSize="66sp"
             android:textStyle="bold"
-            android:shadowColor="#2BD8FF"
+            android:shadowColor="#35DFFF"
             android:shadowDx="0"
             android:shadowDy="0"
-            android:shadowRadius="18" />
+            android:shadowRadius="20"/>
 
         <View
             android:id="@+id/orb"
-            android:layout_width="190dp"
-            android:layout_height="190dp"
-            android:alpha="0.72" />
+            android:layout_width="224dp"
+            android:layout_height="224dp"
+            android:alpha="0.72"/>
     </FrameLayout>
 
     <TextView
         android:id="@+id/stateLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
-        android:text="●  System Online"
-        android:textColor="#19E98A"
-        android:textSize="15sp"
+        android:layout_marginTop="3dp"
+        android:text="●  SYSTEM ONLINE"
+        android:textColor="#36E7A1"
+        android:textSize="12sp"
         android:textStyle="bold"
+        android:letterSpacing="0.05"
         app:layout_constraintTop_toBottomOf="@id/orbFrame"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <TextView
         android:id="@+id/moodLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="1dp"
-        android:text="Ready to assist you"
-        android:textColor="#9BC7DA"
-        android:textSize="10sp"
+        android:text="READY TO ASSIST"
+        android:textColor="#6E9CAF"
+        android:textSize="8sp"
+        android:letterSpacing="0.14"
         app:layout_constraintTop_toBottomOf="@id/stateLabel"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <LinearLayout
         android:id="@+id/statusPill"
         android:layout_width="0dp"
-        android:layout_height="58dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="18dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
         android:background="@drawable/status_pill"
         android:gravity="center_vertical"
+        android:paddingStart="13dp"
+        android:paddingEnd="13dp"
         app:layout_constraintTop_toBottomOf="@id/moodLabel"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp">
+        <TextView
+            android:id="@+id/statusDot"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/glass_panel"
+            android:gravity="center"
+            android:text="◉"
+            android:textColor="#4AE6FF"
+            android:textSize="14sp"/>
 
-            <TextView
-                android:id="@+id/statusDot"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="◉"
-                android:textColor="#21DFFF"
-                android:textSize="18sp" />
+        <TextView
+            android:id="@+id/stateHint"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:text="“Hello, I am JARVIS.\nHow can I help you today?”"
+            android:textColor="#D7EFF7"
+            android:textSize="10sp"
+            android:lineSpacingExtra="2dp"/>
 
-            <TextView
-                android:id="@+id/stateHint"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="10dp"
-                android:text="“Hello, I am JARVIS.\nHow can I help you today?”"
-                android:textColor="#D5EAF4"
-                android:textSize="11sp"
-                android:lineSpacingExtra="2dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⌁ )))"
-                android:textColor="#18CFFF"
-                android:textSize="13sp" />
-        </LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="◀ )))"
+            android:textColor="#27DFFF"
+            android:textSize="11sp"
+            android:alpha="0.9"/>
     </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="8dp"
+        android:text="QUICK ACTIONS"
+        android:textColor="#5FA4B8"
+        android:textSize="8sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.16"
+        app:layout_constraintTop_toBottomOf="@id/statusPill"
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <GridLayout
         android:id="@+id/quickGrid"
         android:layout_width="0dp"
-        android:layout_height="122dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginTop="9dp"
-        android:layout_marginEnd="18dp"
+        android:layout_height="116dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="15dp"
         android:columnCount="3"
         android:rowCount="2"
         android:useDefaultMargins="false"
@@ -175,45 +222,46 @@
         <TextView
             android:id="@+id/voiceQuickButton"
             style="@style/JarvisQuickButton"
-            android:text="🎙\nVoice" />
+            android:text="◉\nVOICE"/>
 
         <TextView
             android:id="@+id/typeQuickButton"
             style="@style/JarvisQuickButton"
-            android:text="⌨\nType" />
+            android:text="⌨\nTYPE"/>
 
         <TextView
             android:id="@+id/cameraQuickButton"
             style="@style/JarvisQuickButton"
-            android:text="▣\nCamera" />
+            android:text="◇\nCAMERA"/>
 
         <TextView
             android:id="@+id/appsQuickButton"
             style="@style/JarvisQuickButton"
-            android:text="▦\nApps" />
+            android:text="▦\nAPPS"/>
 
         <TextView
             android:id="@+id/toolsQuickButton"
             style="@style/JarvisQuickButton"
-            android:text="⚙\nTools" />
+            android:text="⌁\nTOOLS"/>
 
         <TextView
             android:id="@+id/settingsQuickButton"
             style="@style/JarvisQuickButton"
-            android:text="⚙\nSettings" />
+            android:text="⚙\nSETTINGS"/>
     </GridLayout>
 
     <LinearLayout
         android:id="@+id/inputBar"
         android:layout_width="0dp"
-        android:layout_height="46dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginEnd="18dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/status_pill"
         android:gravity="center_vertical"
-        android:paddingStart="12dp"
-        android:paddingEnd="8dp"
-        app:layout_constraintTop_toBottomOf="@id/quickGrid"
+        android:paddingStart="7dp"
+        android:paddingEnd="6dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -221,10 +269,11 @@
             android:id="@+id/listeningIndicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="▮▮▮  Listening..."
+            android:layout_marginStart="5dp"
+            android:text="▮▮▮"
             android:textColor="#20DFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:textSize="9sp"
+            android:textStyle="bold"/>
 
         <EditText
             android:id="@+id/inputField"
@@ -232,46 +281,35 @@
             android:layout_height="42dp"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:hint="  Type a command..."
-            android:textColorHint="#49687B"
+            android:hint="  COMMAND..."
+            android:textColorHint="#416779"
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="1"
-            android:paddingStart="8dp"
+            android:paddingStart="5dp"
             android:textColor="#EAFBFF"
-            android:textSize="12sp" />
+            android:textSize="11sp"/>
 
         <ImageButton
             android:id="@+id/micButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:background="@drawable/mic_bg"
             android:contentDescription="Voice input"
+            android:padding="9dp"
             android:src="@android:drawable/ic_btn_speak_now"
-            android:tint="#DDFBFF" />
+            android:tint="#DDFBFF"/>
 
         <ImageButton
             android:id="@+id/sendButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:layout_marginStart="4dp"
             android:background="@drawable/send_bg"
             android:contentDescription="Send"
+            android:padding="9dp"
             android:src="@android:drawable/ic_menu_send"
-            android:tint="#EFFFFF" />
+            android:tint="#EFFFFF"/>
     </LinearLayout>
-
-    <ImageButton
-        android:id="@+id/clearButton"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginBottom="8dp"
-        android:background="@android:color/transparent"
-        android:contentDescription="Clear chat"
-        android:src="@android:drawable/ic_menu_delete"
-        android:tint="#4D7082"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/chatRecycler"
@@ -280,6 +318,6 @@
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/inputBar" />
+        app:layout_constraintBottom_toTopOf="@id/inputBar"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
