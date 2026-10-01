@@ -36,8 +36,6 @@ class GroqApiClient(private val apiKey: String) {
         val body = JSONObject().apply {
             put("model", model)
             put("messages", messages)
-            put("temperature", 0.2)
-            put("response_format", JSONObject().put("type", "json_object"))
         }
 
         val request = Request.Builder()
