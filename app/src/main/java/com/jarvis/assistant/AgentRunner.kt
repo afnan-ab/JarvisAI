@@ -263,6 +263,13 @@ class AgentRunner(
                     service.typeIntoElement(idx, text)
                     actionsTaken.add("typed \"$text\" into element $idx")
                 }
+                "send" -> {
+                    if (!service.tapByText("send")) {
+                        return "I couldn't find the Send button, so I did not claim the message was sent."
+                    }
+                    actionsTaken.add("pressed Send")
+                    delay(1200)
+                }
                 "scroll" -> {
                     service.scrollDown()
                     actionsTaken.add("scrolled")
