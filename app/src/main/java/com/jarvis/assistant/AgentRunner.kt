@@ -96,7 +96,12 @@ class AgentRunner(
                     actionsTaken.add("pressed back")
                 }
                 "done" -> {
-                    return json.optString("summary", "Done.")
+                    val summary = json.optString("summary", "Done.")
+                    if (verifyCompletion(instruction, service)) {
+                        return summary
+                    }
+                    actionsTaken.add("agent claimed done, but verification failed")
+                    delay(700)
                 }
                 else -> return "I wasn't sure how to continue, so I stopped."
             }
@@ -105,6 +110,41 @@ class AgentRunner(
         }
 
         return "I tried several steps but couldn't finish that fully - want me to keep going?"
+    }
+
+    private fun verifyCompletion(instruction: String, service: AssistantAccessibilityService): Boolean {
+        val text = service.readScreenText().lowercase()
+        val pkg = service.activePackageName().lowercase()
+        val t = instruction.lowercase()
+
+        fun hasAny(vararg values: String) = values.any { text.contains(it) }
+        fun appIs(vararg values: String) = values.any { pkg.contains(it) }
+
+        val appOk = when {
+            t.contains("whatsapp") -> appIs("whatsapp")
+            t.contains("instagram lite") -> appIs("instagram")
+            t.contains("instagram") -> appIs("instagram")
+            t.contains("settings") -> appIs("settings")
+            t.contains("file manager") -> appIs("file", "documents", "files")
+            else -> true
+        }
+
+        val contentOk = when {
+            Regex("""\b(message|send|bhejo|kaho|saying)\b""").containsMatchIn(t) -> {
+                val msg = Regex("""(?:message|bhejo|kaho|saying)\s+.+?\s+(?:hi|hello|hey|.+)$""")
+                    .find(t)?.value?.substringAfterLast(" ")?.trim()
+                msg.isNullOrBlank() || text.contains(msg)
+            }
+            t.contains("search") -> {
+                val query = Regex("""search(?: for)?\s+(.+?)(?:\s+on it|$)""").find(t)?.groupValues?.getOrNull(1)?.trim()
+                query.isNullOrBlank() || text.contains(query)
+            }
+            t.contains("developer option") -> hasAny("developer options", "developer option")
+            t.contains("find jarvis") -> text.contains("jarvis")
+            else -> true
+        }
+
+        return appOk && contentOk
     }
 
     private fun parseAgentJson(raw: String): JSONObject? {
@@ -222,7 +262,12 @@ class AgentRunner(
                     actionsTaken.add("pressed back")
                 }
                 "done" -> {
-                    return json.optString("summary", "Done.")
+                    val summary = json.optString("summary", "Done.")
+                    if (verifyCompletion(instruction, service)) {
+                        return summary
+                    }
+                    actionsTaken.add("agent claimed done, but verification failed")
+                    delay(700)
                 }
                 else -> return "I wasn't sure how to continue, so I stopped."
             }
