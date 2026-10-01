@@ -278,7 +278,7 @@ class MainActivity : AppCompatActivity() {
 
         var message = text.substring(start + recipient.length).trim()
         message = message
-            .replace(Regex("^(?:and\\s+)?(?:saying|message|with message)\\s+"), "", ignoreCase = true)
+            .replace(Regex("^(?:and\\s+)?(?:saying|message|with message)\\s+", RegexOption.IGNORE_CASE), "")
             .trim()
 
         if (message.isBlank()) {
