@@ -209,7 +209,7 @@ class AgentRunner(
         val t = instruction.trim()
         if (!Regex("""(?i)whatsapp""").containsMatchIn(t)) return null
 
-        val messageTail = Regex("""(?i)(?:message|msg|send)\\s+(.+)$""")
+        val messageTail = Regex("""(?i)(?:message|msg|send)\s+(.+)$""")
             .find(t)?.groupValues?.getOrNull(1)?.trim()
             ?: return null
 
@@ -219,7 +219,7 @@ class AgentRunner(
 
         var message = messageTail.substring(start + recipient.length).trim()
         message = message
-            .replaceFirst(Regex("""(?i)^(?:saying|that|saying that)\\s+"""), "")
+            .replaceFirst(Regex("""(?i)^(?:saying|that|saying that)\s+"""), "")
             .trim(' ', ':', '-', '—')
 
         if (message.isBlank()) return null
@@ -262,7 +262,7 @@ class AgentRunner(
             delay(700)
         }
         if (!opened) {
-            return "I couldn't find "$recipient" in WhatsApp Search, so I did not send the message."
+            return "I couldn't find \"$recipient\" in WhatsApp Search, so I did not send the message."
         }
         delay(1200)
 
@@ -271,11 +271,11 @@ class AgentRunner(
         if (!packageName.contains("whatsapp") ||
             !screenText.contains(recipient.lowercase())
         ) {
-            return "I couldn't verify that the "$recipient" chat was open, so I did not send the message."
+            return "I couldn't verify that the \"$recipient\" chat was open, so I did not send the message."
         }
 
         if (!service.typeIntoFirstEditableField(message)) {
-            return "I couldn't enter the message in the "$recipient" chat, so I did not send it."
+            return "I couldn't enter the message in the \"$recipient\" chat, so I did not send it."
         }
         delay(400)
 
