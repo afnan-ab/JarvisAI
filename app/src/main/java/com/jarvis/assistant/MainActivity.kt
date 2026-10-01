@@ -40,8 +40,10 @@ class MainActivity : AppCompatActivity() {
     private val messages = mutableListOf<ChatMessage>()
 
     private val screenTaskKeywords = listOf(
-        "open ", "kholo", "khol do", "type ", "search box", "follow", "start", "shuru karo",
-        "tap ", "click ", "scroll", "post ", "like ", "comment", "waha", "wahan"
+        "open ", "kholo", "khol do", "type ", "search ", "search for ", "find ",
+        "message ", "send ", "search box", "follow", "start", "shuru karo",
+        "tap ", "click ", "scroll", "post ", "like ", "comment", "developer option",
+        "settings", "waha", "wahan"
     )
 
     private val rememberPatterns = listOf(
@@ -182,6 +184,32 @@ class MainActivity : AppCompatActivity() {
         return screenTaskKeywords.any { t.contains(it) }
     }
 
+    private fun looksLikeMultiStepTask(text: String): Boolean {
+        val t = text.trim().lowercase()
+        val hasConnector = Regex("""\b(and|then|phir|aur)\b|[,;]""").containsMatchIn(t)
+        val hasPhoneAction = listOf(
+            "open ", "kholo", "khol do", "message ", "send ", "search ",
+            "find ", "developer option", "tap ", "click ", "scroll "
+        ).any { t.contains(it) }
+        return hasConnector && hasPhoneAction
+    }
+
+    private fun runScreenTask(text: String) {
+        setOrbState("thinking")
+        appendMessage("Working on it...", isUser = false)
+        lifecycleScope.launch {
+            val summary = try {
+                agent.run(text)
+            } catch (e: Exception) {
+                "I ran into an error: " + e.message
+            }
+            setOrbState("calm")
+            appendMessage(summary, isUser = false)
+            memory.addTurn("assistant", summary)
+            voice.speak(summary)
+        }
+    }
+
     private fun tryRemember(text: String): String? {
         for (pattern in rememberPatterns) {
             pattern.find(text.trim())?.let { m -> return m.groupValues[1].trim() }
@@ -204,6 +232,14 @@ class MainActivity : AppCompatActivity() {
         emotion.registerUserMessage(text)
         refreshMoodLabel()
 
+        // Multi-step phone tasks go directly to the visual agent.
+        // This prevents the simple parser from misreading:
+        // "open WhatsApp and message X Fnd hi".
+        if (looksLikeMultiStepTask(text)) {
+            runScreenTask(text)
+            return
+        }
+
         when (val result = commands.process(text)) {
             is CommandProcessor.Result.Handled -> {
                 appendMessage(result.spokenReply, isUser = false)
@@ -215,19 +251,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (looksLikeScreenTask(text)) {
-            setOrbState("thinking")
-            appendMessage("Working on it...", isUser = false)
-            lifecycleScope.launch {
-                val summary = try {
-                    agent.run(text)
-                } catch (e: Exception) {
-                    "I ran into an error: ${e.message}"
-                }
-                setOrbState("calm")
-                appendMessage(summary, isUser = false)
-                memory.addTurn("assistant", summary)
-                voice.speak(summary)
-            }
+            runScreenTask(text)
             return
         }
 
