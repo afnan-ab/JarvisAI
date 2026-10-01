@@ -59,7 +59,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         memory = MemoryStore(this)
-        memory.clearTurnsOnly()
         emotion = EmotionEngine(memory)
         commands = CommandProcessor(this)
         api = GroqApiClient(apiKey)
