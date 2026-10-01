@@ -8,7 +8,12 @@ import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
-data class ScreenElement(val index: Int, val label: String, val clickable: Boolean, val editable: Boolean)
+data class ScreenElement(
+    val index: Int,
+    val label: String,
+    val clickable: Boolean,
+    val editable: Boolean
+)
 
 class AssistantAccessibilityService : AccessibilityService() {
 
@@ -32,62 +37,57 @@ class AssistantAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {}
 
     fun tapByText(label: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val target = findNodeByText(root, label.lowercase()) ?: return false
+        return performClick(target)
+    }
 
-    /**
-     * Clicks a non-editable node whose visible text/content description exactly matches
-     * the supplied label. This avoids clicking the WhatsApp search field itself after
-     * the recipient name has been typed into it.
-     */
+    /** Finds a visible non-editable text/description and clicks its clickable parent. */
+    fun tapTextResult(label: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val target = findNonEditableContainingText(root, label.trim().lowercase()) ?: return false
+        return performClick(target)
+    }
+
+    /** Finds WhatsApp's Search control without relying on fixed screen coordinates. */
+    fun tapSearchControl(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val target = findSearchNode(root) ?: return false
+        return performClick(target)
+    }
+
+    /** Types into the first editable field currently exposed by the accessibility tree. */
+    fun typeIntoFirstEditableField(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val field = findEditableNode(root) ?: return false
+        field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        val args = Bundle()
+        args.putCharSequence(
+            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+            text
+        )
+        return field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+    }
+
+    fun hasEditableField(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        return findEditableNode(root) != null
+    }
+
+    fun screenContainsText(value: String): Boolean {
+        return readScreenText().lowercase().contains(value.lowercase())
+    }
+
     fun tapExactText(label: String): Boolean {
         val root = rootInActiveWindow ?: return false
         val target = findExactTextNode(root, label.trim().lowercase()) ?: return false
         return performClick(target)
     }
 
-    private fun findExactTextNode(
+    private fun findNodeByText(
         node: AccessibilityNodeInfo,
         label: String
     ): AccessibilityNodeInfo? {
-        val text = node.text?.toString()?.trim()?.lowercase()
-        val desc = node.contentDescription?.toString()?.trim()?.lowercase()
-        val exact = text == label || desc == label
-        if (exact && !node.isEditable) return node
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            findExactTextNode(child, label)?.let { return it }
-        }
-        return null
-    }
-
-    /**
-     * Sets text in the first editable node on the current screen.
-     * WhatsApp's chat screen normally exposes only its message composer as editable.
-     */
-    fun typeIntoFirstEditableField(text: String): Boolean {
-        val root = rootInActiveWindow ?: return false
-        val field = findEditableNode(root) ?: return false
-        field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-        val args = Bundle()
-        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
-        return field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-    }
-
-    private fun findEditableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (node.isEditable && node.isEnabled) return node
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            findEditableNode(child)?.let { return it }
-        }
-        return null
-    }
-
-        val root = rootInActiveWindow ?: return false
-        val target = findNodeByText(root, label.lowercase()) ?: return false
-        return performClick(target)
-    }
-
-    private fun findNodeByText(node: AccessibilityNodeInfo, label: String): AccessibilityNodeInfo? {
         val text = node.text?.toString()?.lowercase()
         val desc = node.contentDescription?.toString()?.lowercase()
         if ((text != null && text.contains(label)) || (desc != null && desc.contains(label))) {
@@ -96,6 +96,70 @@ class AssistantAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             findNodeByText(child, label)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findNonEditableContainingText(
+        node: AccessibilityNodeInfo,
+        label: String
+    ): AccessibilityNodeInfo? {
+        val text = node.text?.toString()?.trim()?.lowercase()
+        val desc = node.contentDescription?.toString()?.trim()?.lowercase()
+        if (!node.isEditable &&
+            ((text != null && text.contains(label)) || (desc != null && desc.contains(label)))
+        ) {
+            return node
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findNonEditableContainingText(child, label)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findExactTextNode(
+        node: AccessibilityNodeInfo,
+        label: String
+    ): AccessibilityNodeInfo? {
+        val text = node.text?.toString()?.trim()?.lowercase()
+        val desc = node.contentDescription?.toString()?.trim()?.lowercase()
+        if (!node.isEditable && (text == label || desc == label)) return node
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findExactTextNode(child, label)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findSearchNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val text = node.text?.toString()?.trim()?.lowercase().orEmpty()
+        val desc = node.contentDescription?.toString()?.trim()?.lowercase().orEmpty()
+        val hint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            node.hintText?.toString()?.trim()?.lowercase().orEmpty()
+        } else ""
+
+        val looksLikeSearch = text.contains("search") ||
+            desc.contains("search") ||
+            hint.contains("search")
+
+        if (looksLikeSearch && (node.isClickable || node.isEditable || desc.contains("search"))) {
+            return node
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findSearchNode(child)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findEditableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isEditable && node.isEnabled) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findEditableNode(child)?.let { return it }
         }
         return null
     }
@@ -111,7 +175,8 @@ class AssistantAccessibilityService : AccessibilityService() {
         return false
     }
 
-    fun activePackageName(): String = rootInActiveWindow?.packageName?.toString().orEmpty()
+    fun activePackageName(): String =
+        rootInActiveWindow?.packageName?.toString().orEmpty()
 
     fun readScreenText(): String {
         val root = rootInActiveWindow ?: return ""
@@ -128,7 +193,6 @@ class AssistantAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** Enumerates tappable/editable elements on screen for the agent loop, indexed for reference. */
     fun listInteractiveElements(): List<ScreenElement> {
         val root = rootInActiveWindow ?: return emptyList()
         val elements = mutableListOf<ScreenElement>()
@@ -157,10 +221,17 @@ class AssistantAccessibilityService : AccessibilityService() {
             resId?.let { if (it.isNotBlank()) parts.add("id: $it") }
             if (parts.isEmpty()) parts.add(node.className?.toString() ?: "element")
 
-            val label = parts.joinToString(" | ").take(80)
-            elements.add(ScreenElement(elements.size, label, node.isClickable, node.isEditable))
+            elements.add(
+                ScreenElement(
+                    elements.size,
+                    parts.joinToString(" | ").take(80),
+                    node.isClickable,
+                    node.isEditable
+                )
+            )
             refs.add(node)
         }
+
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { collectInteractive(it, elements, refs) }
         }
@@ -174,7 +245,10 @@ class AssistantAccessibilityService : AccessibilityService() {
     fun typeIntoElement(index: Int, text: String): Boolean {
         val node = lastElements.getOrNull(index) ?: return false
         val args = Bundle()
-        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        args.putCharSequence(
+            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+            text
+        )
         return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 
@@ -194,10 +268,10 @@ class AssistantAccessibilityService : AccessibilityService() {
         return null
     }
 
-    fun pressBack() = performGlobalAction(GLOBAL_ACTION_BACK)
-    fun pressHome() = performGlobalAction(GLOBAL_ACTION_HOME)
-    fun openRecents() = performGlobalAction(GLOBAL_ACTION_RECENTS)
-    fun pullDownNotifications() = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+    fun pressBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
+    fun pressHome(): Boolean = performGlobalAction(GLOBAL_ACTION_HOME)
+    fun openRecents(): Boolean = performGlobalAction(GLOBAL_ACTION_RECENTS)
+    fun pullDownNotifications(): Boolean = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
 
     fun tapAt(x: Float, y: Float): Boolean {
         if (x < 0f || y < 0f) return false
@@ -217,15 +291,21 @@ class AssistantAccessibilityService : AccessibilityService() {
                     override fun onSuccess(result: ScreenshotResult) {
                         try {
                             val hwBitmap = android.graphics.Bitmap.wrapHardwareBuffer(
-                                result.hardwareBuffer, result.colorSpace
+                                result.hardwareBuffer,
+                                result.colorSpace
                             )
                             result.hardwareBuffer.close()
-                            val bitmap = hwBitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
-                            callback(bitmap)
-                        } catch (e: Exception) {
+                            callback(
+                                hwBitmap?.copy(
+                                    android.graphics.Bitmap.Config.ARGB_8888,
+                                    false
+                                )
+                            )
+                        } catch (_: Exception) {
                             callback(null)
                         }
                     }
+
                     override fun onFailure(errorCode: Int) {
                         callback(null)
                     }
@@ -237,9 +317,13 @@ class AssistantAccessibilityService : AccessibilityService() {
     }
 
     fun typeIntoFocusedField(text: String): Boolean {
-        val focused = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return false
+        val focused = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            ?: return false
         val args = Bundle()
-        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        args.putCharSequence(
+            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+            text
+        )
         return focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 }
