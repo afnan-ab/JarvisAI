@@ -229,7 +229,7 @@ class CommandProcessor(private val context: Context) {
             "apps", "applications", "installedapps" ->
                 Intent(AndroidSettings.ACTION_APPLICATION_SETTINGS)
             "notifications" ->
-                Intent(AndroidSettings.ACTION_NOTIFICATION_SETTINGS)
+                Intent("android.settings.NOTIFICATION_SETTINGS")
             "accessibility" ->
                 Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)
             "developeroptions", "developer" ->
