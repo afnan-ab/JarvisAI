@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.toolsQuickButton).setOnClickListener {
-            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "menu"))
+            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "tools"))
         }
 
         findViewById<TextView>(R.id.settingsQuickButton).setOnClickListener {
