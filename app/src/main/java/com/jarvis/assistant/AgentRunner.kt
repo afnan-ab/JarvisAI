@@ -17,59 +17,71 @@ class AgentRunner(
             ?: return "I need the Accessibility permission turned on first."
 
         if (!commands.openApp("WhatsApp")) {
-            return "I couldn't open WhatsApp."
+            return "I couldn't open WhatsApp, so I did not send the message."
+        }
+
+        delay(1800)
+
+        if (!service.tapSearchControl()) {
+            return "I couldn't open WhatsApp Search, so I did not send the message."
+        }
+
+        delay(900)
+
+        if (!service.typeIntoWhatsAppSearch(recipient)) {
+            return "I opened WhatsApp Search, but couldn't type the recipient name."
         }
 
         delay(1500)
 
-        // 1) Open WhatsApp's own Search control.
-        if (!service.tapSearchControl()) {
-            return "I couldn't open WhatsApp Search."
-        }
-
-        delay(700)
-
-        // 2) Type the exact recipient name into the Search field.
-        if (!service.typeIntoFirstEditableField(recipient)) {
-            return "I opened WhatsApp Search, but couldn't type the recipient name."
-        }
-
-        delay(1200)
-
-        // 3) Tap a non-editable search result containing the exact recipient.
-        if (!service.tapTextResult(recipient)) {
-            return "I found the search box, but couldn't select \"$recipient\" from the results."
-        }
-
-        delay(1200)
-
-        // 4) A chat screen should expose an editable message composer.
-        var composerReady = false
-        repeat(5) {
-            if (service.hasEditableField()) {
-                composerReady = true
+        var opened = false
+        repeat(4) {
+            if (service.tapWhatsAppSearchResult(recipient)) {
+                opened = true
                 return@repeat
             }
-            delay(400)
-        }
-        if (!composerReady) {
-            return "I selected \"$recipient\", but the chat composer did not appear."
+            delay(700)
         }
 
-        // 5) Type the exact requested message.
-        if (!service.typeIntoFirstEditableField(message)) {
-            return "I opened \"$recipient\", but couldn't type the message."
+        if (!opened) {
+            return "I found the search results, but couldn't open the "$recipient" chat."
         }
 
-        delay(500)
+        delay(1500)
 
-        // 6) Press the visible Send control.
-        if (!service.tapByText("send")) {
-            return "I typed the message, but couldn't find the Send button."
+        val packageName = service.activePackageName().lowercase()
+        val screenText = service.readScreenText()
+        if (!packageName.contains("whatsapp") ||
+            !screenText.contains(recipient, ignoreCase = true) ||
+            !service.hasWhatsAppComposer()
+        ) {
+            // If a profile/details page was opened, go back once and try the row again.
+            service.pressBack()
+            delay(900)
+            if (!service.tapWhatsAppSearchResult(recipient)) {
+                return "I couldn't verify that the "$recipient" chat was open, so I did not send the message."
+            }
+            delay(1200)
         }
 
-        delay(1000)
-        return "Message sent to $recipient: $message"
+        if (!service.typeIntoWhatsAppComposer(message)) {
+            return "I opened "$recipient", but couldn't type the message."
+        }
+
+        delay(600)
+
+        if (!service.tapWhatsAppSend()) {
+            return "I typed the message, but couldn't find WhatsApp's Send button."
+        }
+
+        delay(1200)
+
+        val afterSend = service.readScreenText()
+        return if (afterSend.contains(message, ignoreCase = true)) {
+            "Message sent to $recipient: $message"
+        } else {
+            "I pressed Send, but couldn't verify the message on screen."
+        }
     }
 
     suspend fun run(instruction: String, maxSteps: Int = 12): String {
