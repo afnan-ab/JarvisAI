@@ -118,8 +118,6 @@ class MainActivity : AppCompatActivity() {
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
         promptOverlayPermissionIfNeeded()
-        startWakeWordService()
-        handleWakeWordIntent(intent)
     }
 
     private fun showOverLockScreen() {
@@ -139,25 +137,6 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleWakeWordIntent(intent)
-    }
-
-    private fun handleWakeWordIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra("wake_word_triggered", false) == true) {
-            voice.startListening()
-        }
-    }
-
-    private fun startWakeWordService() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-        val serviceIntent = Intent(this, WakeWordService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
     }
 
     override fun onResume() {
@@ -321,7 +300,6 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        startWakeWordService()
     }
 
     private fun promptOverlayPermissionIfNeeded() {
