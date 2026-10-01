@@ -30,7 +30,18 @@ class AgentRunner(
             val height = bitmap.height
 
             val prompt = """
-                You are controlling an Android phone by looking at a screenshot. Complete this instruction: "$instruction"
+                You are Jarvis controlling an Android phone screen step by step. Complete the ENTIRE instruction, not just the first action:
+                "$instruction"
+
+                Treat the instruction as a small task plan. Preserve the exact names, search terms, and message text.
+                Examples:
+                - "open WhatsApp and message X Fnd hi" means open WhatsApp, find the contact/chat X Fnd, open it, type exactly "hi", and send it.
+                - "open Instagram Lite and search for bas boy on it" means open Instagram Lite, use its search UI, search exactly "bas boy", and stop when the results are visible.
+                - "open Settings and find developer option" means open Settings, locate Developer options, and stop when it is visible.
+                Do not stop after merely opening the requested app. Use the next screenshot to decide the next step.
+                Prefer visible UI labels over guessing coordinates. If a search icon/button must be opened before typing, tap it first.
+                Keep executing until the full instruction is completed. Only use "done" when it really is complete.
+
                 Steps already taken: ${if (actionsTaken.isEmpty()) "none yet" else actionsTaken.joinToString("; ")}
                 The screenshot is $width x $height pixels. Give tap coordinates within these bounds.
 
@@ -43,7 +54,6 @@ class AgentRunner(
                 {"action":"done","summary":"<short summary spoken to the user>"}
 
                 For "type", tap the field first at the given coordinates, then the text will be entered automatically.
-                Use "done" once the instruction is complete, or if you're stuck after repeated attempts.
             """.trimIndent()
 
             val raw = try {
@@ -127,7 +137,17 @@ class AgentRunner(
                 }
 
             val prompt = """
-                You are controlling an Android phone screen step by step to complete this instruction: "$instruction"
+                You are Jarvis controlling an Android phone screen step by step. Complete the ENTIRE instruction:
+                "$instruction"
+
+                Treat it as a multi-step task and preserve exact names, search terms, and message text.
+                Do not stop after opening an app. If the instruction says "open WhatsApp and message X Fnd hi",
+                continue through finding X Fnd, opening the chat, entering "hi", and sending it.
+                If it says "open Instagram Lite and search for bas boy", continue until the search results are visible.
+                If it says "open Settings and find developer option", continue until Developer options is visible.
+                Use visible labels/hints/IDs when available. If a search box is not visible, open the search control first.
+                Only use "done" when the whole instruction is complete.
+
                 Steps already taken: ${if (actionsTaken.isEmpty()) "none yet" else actionsTaken.joinToString("; ")}
 
                 Current screen elements (numbered):
