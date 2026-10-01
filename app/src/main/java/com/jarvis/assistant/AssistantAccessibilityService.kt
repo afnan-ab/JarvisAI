@@ -122,6 +122,7 @@ class AssistantAccessibilityService : AccessibilityService() {
 
     private fun collectText(node: AccessibilityNodeInfo, sb: StringBuilder) {
         node.text?.let { sb.append(it).append(" ") }
+        node.contentDescription?.let { sb.append(it).append(" ") }
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { collectText(it, sb) }
         }
