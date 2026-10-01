@@ -343,7 +343,11 @@ class MainActivity : AppCompatActivity() {
         pendingSecureScreenTask?.let { pendingTask ->
             pendingSecureScreenTask = null
             if (security.checkPassphrase(text)) {
-                runScreenTask(pendingTask)
+                if (looksLikeWhatsAppMessageTask(pendingTask)) {
+                    runWhatsAppTask(pendingTask)
+                } else {
+                    runScreenTask(pendingTask)
+                }
             } else {
                 val reply = "That passphrase didn't match, so I cancelled the action."
                 appendMessage(reply, isUser = false)
