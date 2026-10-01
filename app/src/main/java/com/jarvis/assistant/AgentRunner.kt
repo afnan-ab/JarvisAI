@@ -41,6 +41,7 @@ class AgentRunner(
                 - "open Settings and find developer option" means open Settings, locate Developer options, and stop when it is visible.
                 Do not stop after merely opening the requested app. Use the next screenshot to decide the next step.
                 Prefer visible UI labels over guessing coordinates. If a search icon/button must be opened before typing, tap it first.
+                IMPORTANT WhatsApp messaging rule: whenever the instruction asks to message/send a WhatsApp contact, ALWAYS use WhatsApp's own search flow. Open WhatsApp, tap the Search control, type the exact recipient name, tap the matching search result/chat, verify the chat is open, then type the exact requested message and press Send. Do NOT use a phone-number deep link, recent-chat shortcut, or direct URL to choose the recipient. Do NOT type the message before the recipient search result has been opened.
                 Keep executing until the full instruction is completed. Only use "done" when it really is complete.
 
                 Steps already taken: ${if (actionsTaken.isEmpty()) "none yet" else actionsTaken.joinToString("; ")}
@@ -306,6 +307,7 @@ class AgentRunner(
 
                 If there is no visible text search box on screen yet, look for a search icon or button
                 (often labeled "desc: Search" or a magnifying glass) and tap that first.
+                For WhatsApp messaging, the recipient search box is mandatory: never choose a person from the home/recent list when the Search control is available.
                 Elements list search fields by hint text or id when they have no visible label - use those.
                 If the element you need is not in the list, try "scroll" first before giving up.
                 Reply with ONLY one JSON object, nothing else, no markdown fences, no explanation. Pick one of:
