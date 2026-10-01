@@ -44,7 +44,7 @@ class AgentRunner(
         }
 
         if (!opened) {
-            return "I found the search results, but couldn't open the "$recipient" chat."
+            return "I found the search results, but couldn't open the \"$recipient\" chat."
         }
 
         delay(1500)
@@ -59,13 +59,13 @@ class AgentRunner(
             service.pressBack()
             delay(900)
             if (!service.tapWhatsAppSearchResult(recipient)) {
-                return "I couldn't verify that the "$recipient" chat was open, so I did not send the message."
+                return "I couldn't verify that the \"$recipient\" chat was open, so I did not send the message."
             }
             delay(1200)
         }
 
         if (!service.typeIntoWhatsAppComposer(message)) {
-            return "I opened "$recipient", but couldn't type the message."
+            return "I opened \"$recipient\", but couldn't type the message."
         }
 
         delay(600)
