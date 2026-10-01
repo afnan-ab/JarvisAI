@@ -186,6 +186,13 @@ class MainActivity : AppCompatActivity() {
         return screenTaskKeywords.any { t.contains(it) }
     }
 
+    private fun looksLikeWhatsAppMessageTask(text: String): Boolean {
+        val t = text.lowercase()
+        val isWhatsApp = t.contains("whatsapp")
+        val isMessageAction = listOf("message", "send", "bhejo", "msg").any { t.contains(it) }
+        return isWhatsApp && isMessageAction
+    }
+
     private fun looksLikeSensitiveScreenTask(text: String): Boolean {
         val t = text.lowercase()
         return listOf(
@@ -306,7 +313,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Sensitive visual tasks must also honor the optional Jarvis passphrase.
-        if (looksLikeMultiStepTask(text) && security.isEnabled() && looksLikeSensitiveScreenTask(text)) {
+        if ((looksLikeMultiStepTask(text) || looksLikeWhatsAppMessageTask(text)) &&
+            security.isEnabled() && looksLikeSensitiveScreenTask(text)) {
             pendingSecureScreenTask = text
             val reply = "Before I do that, please say the Jarvis passphrase."
             appendMessage(reply, isUser = false)
@@ -318,7 +326,7 @@ class MainActivity : AppCompatActivity() {
         // Multi-step phone tasks go directly to the visual agent.
         // This prevents the simple parser from misreading:
         // "open WhatsApp and message X Fnd hi".
-        if (looksLikeMultiStepTask(text)) {
+        if (looksLikeMultiStepTask(text) || looksLikeWhatsAppMessageTask(text)) {
             runScreenTask(text)
             return
         }
