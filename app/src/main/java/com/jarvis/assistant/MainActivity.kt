@@ -91,7 +91,6 @@ class MainActivity : AppCompatActivity() {
         val sendButton = findViewById<ImageButton>(R.id.sendButton)
         micButton = findViewById(R.id.micButton)
         val settingsButton = findViewById<ImageButton>(R.id.settingsButton)
-        val clearButton = findViewById<ImageButton>(R.id.clearButton)
 
         settingsButton.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
