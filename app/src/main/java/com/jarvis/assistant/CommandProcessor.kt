@@ -207,6 +207,9 @@ class CommandProcessor(private val context: Context) {
         }
     }
 
+    fun findBestContactNameInText(text: String): String? =
+        contactsHelper.findBestDisplayNameInText(text)
+
     fun openApp(name: String): Boolean {
         val normalized = normalize(name)
         if (normalized == "setting" || normalized == "settings" || normalized == "androidsettings" || normalized == "systemsettings") {
