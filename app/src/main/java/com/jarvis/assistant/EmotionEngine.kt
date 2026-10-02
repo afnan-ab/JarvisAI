@@ -45,4 +45,15 @@ class EmotionEngine(private val memory: MemoryStore) {
     }
 
     fun moodScore(): Double = memory.mood()
+
+    fun moodLabel(): String {
+        val m = memory.mood()
+        return when {
+            m >= 0.65 -> "EXCITED"
+            m >= 0.25 -> "HAPPY"
+            m > -0.25 -> "CALM"
+            m > -0.65 -> "ANNOYED"
+            else -> "SAD"
+        }
+    }
 }
