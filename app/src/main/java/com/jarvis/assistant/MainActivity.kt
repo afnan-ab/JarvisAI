@@ -34,9 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var security: SecuritySettings
     private var pendingSecureScreenTask: String? = null
     private lateinit var micButton: ImageButton
-    private lateinit var orb: View
     private lateinit var stateLabel: TextView
-    private var pulseAnimator: ObjectAnimator? = null
 
     private lateinit var adapter: ChatAdapter
     private val messages = mutableListOf<ChatMessage>()
@@ -67,9 +65,7 @@ class MainActivity : AppCompatActivity() {
         api = GroqApiClient(apiKey)
         agent = AgentRunner(api, commands)
 
-        orb = findViewById(R.id.orb)
         stateLabel = findViewById(R.id.stateLabel)
-        startPulse()
 
         voice = VoiceManager(
             this,
@@ -185,19 +181,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setOrbState(state: String) {
+        val core = findViewById<TextView>(R.id.waveform)
+        val telemetry = findViewById<TextView>(R.id.coreTelemetry)
         when (state) {
             "listening" -> {
-                orb.setBackgroundResource(R.drawable.orb_listening)
-                stateLabel.text = "Listening..."
+                stateLabel.text = "●  LISTENING"
+                core.text = "▁▅█▇▅█▇█▅▇█▅▁"
+                core.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+                telemetry.text = "MIC LINK  •  VOICE INPUT  •  ACTIVE"
                 micButton.setBackgroundResource(R.drawable.mic_bg_active)
             }
             "thinking" -> {
-                orb.setBackgroundResource(R.drawable.orb_thinking)
-                stateLabel.text = "Thinking..."
+                stateLabel.text = "●  PROCESSING"
+                core.text = "▃▅▇█▇▅▃  ▅▇█▇▅  ▃▅▇█"
+                telemetry.text = "NEURAL LINK  •  PROCESSING  •  PLEASE WAIT"
             }
             else -> {
-                orb.setBackgroundResource(R.drawable.orb_calm)
-                stateLabel.text = "Calm / Ready"
+                stateLabel.text = "●  SYSTEM ONLINE"
+                core.text = "▁▃▅▇▅▃▁  ▂▅▇█▇▅▂  ▁▃▆█▆▃▁"
+                telemetry.text = "VOICE LINK  •  AI READY  •  100%"
                 micButton.setBackgroundResource(R.drawable.mic_bg)
             }
         }
