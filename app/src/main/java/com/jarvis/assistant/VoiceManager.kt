@@ -55,14 +55,51 @@ class VoiceManager(
     }
 
     fun applySettings() {
-        val wantMale = settings.getPreferMale()
-        val voice = tts?.voices?.firstOrNull {
-            it.name.contains(if (wantMale) "male" else "female", ignoreCase = true) &&
-                !it.isNetworkConnectionRequired
+        val profile = settings.getProfile()
+        val profilePitch = when (profile) {
+            "deep" -> 0.72f
+            "neutral" -> 0.88f
+            "warm" -> 1.02f
+            "bright" -> 1.14f
+            "cinematic", "british" -> 0.78f
+            else -> settings.getPitch()
         }
-        voice?.let { tts?.voice = it }
-        tts?.setPitch(settings.getPitch())
-        tts?.setSpeechRate(settings.getRate())
+        val profileRate = when (profile) {
+            "deep" -> 0.88f
+            "neutral" -> 0.96f
+            "warm" -> 0.92f
+            "bright" -> 1.04f
+            "cinematic", "british" -> 0.88f
+            else -> settings.getRate()
+        }
+        val wantMale = when (profile) {
+            "warm", "bright" -> false
+            else -> true
+        }
+        val localeVoices = tts?.voices.orEmpty().filter {
+            it.locale.language == "en" && !it.isNetworkConnectionRequired
+        }
+        val preferredLocale = if (profile == "british") "GB" else "IN"
+        val preferredLocaleVoices = localeVoices.filter { it.locale.country.equals(preferredLocale, ignoreCase = true) }
+        val likelyMaleNames = listOf("male", "prabhat", "ravi", "amit", "raj", "arjun", "aditya", "ahp")
+        val likelyFemaleNames = listOf("female", "ene", "eda")
+        val genderVoice = if (wantMale) {
+            preferredLocaleVoices.firstOrNull { voice ->
+                likelyMaleNames.any { key -> voice.name.contains(key, ignoreCase = true) } &&
+                    likelyFemaleNames.none { key -> voice.name.contains(key, ignoreCase = true) }
+            } ?: preferredLocaleVoices.firstOrNull {
+                likelyFemaleNames.none { key -> it.name.contains(key, ignoreCase = true) }
+            }
+        } else {
+            preferredLocaleVoices.firstOrNull { voice ->
+                likelyFemaleNames.any { key -> voice.name.contains(key, ignoreCase = true) }
+            }
+        } ?: localeVoices.firstOrNull {
+            likelyMaleNames.any { key -> it.name.contains(key, ignoreCase = true) }
+        }
+        genderVoice?.let { tts?.voice = it }
+        tts?.setPitch(profilePitch)
+        tts?.setSpeechRate(profileRate)
     }
 
     private fun containsDevanagari(text: String): Boolean = text.any { it.code in 0x0900..0x097F }
@@ -108,6 +145,9 @@ class VoiceManager(
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, recognitionLocale())
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
         }
         recognizer?.startListening(intent)
     }
@@ -120,11 +160,15 @@ class VoiceManager(
 
     fun speak(text: String, onDone: () -> Unit = {}) {
         if (ttsReady) {
-            val locale = if (containsDevanagari(text)) Locale("hi", "IN") else Locale("en", "IN")
+            val profile = settings.getProfile()
+            val locale = if (containsDevanagari(text)) Locale("hi", "IN") else if (profile == "british") Locale("en", "GB") else Locale("en", "IN")
             val result = tts?.setLanguage(locale)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 tts?.setLanguage(Locale.getDefault())
             }
+            // setLanguage() can switch the engine back to its locale default.
+            // Re-apply the Indian JARVIS voice preference afterwards.
+            applySettings()
             pendingDoneCallback = onDone
             val id = UUID.randomUUID().toString()
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
