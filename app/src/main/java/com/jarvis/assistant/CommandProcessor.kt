@@ -59,6 +59,14 @@ class CommandProcessor(private val context: Context) {
     private fun processSingle(raw: String, isStandalone: Boolean): Result {
         val t = raw.trim().lowercase()
 
+        // Keep simple greetings local so they never fall through to the vision agent.
+        when (t) {
+            "hi", "hello", "hey", "hii", "helo", "good morning", "good afternoon", "good evening" ->
+                return Result.Handled("Hello. I am JARVIS. How can I help?")
+            "how are you", "how are you doing" ->
+                return Result.Handled("I am online and ready.")
+        }
+
         if (t.contains("battery")) {
             val pct = getBatteryPercentage()
             return Result.Handled(if (pct != null) "Your battery is at $pct%." else "I couldn't read the battery level.")
