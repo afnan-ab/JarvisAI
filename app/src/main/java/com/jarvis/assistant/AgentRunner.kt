@@ -10,9 +10,12 @@ import java.io.ByteArrayOutputStream
 
 class AgentRunner(
     private val gemini: GroqApiClient,
-    private val commands: CommandProcessor
+    private val commands: CommandProcessor,
+    private val onProgress: ((String) -> Unit)? = null
 ) {
+    private fun progress(message: String) { onProgress?.invoke(message) }
     suspend fun runWhatsAppMessage(recipient: String, message: String): String {
+        progress("01/08  •  Opening WhatsApp")
         val service = AssistantAccessibilityService.instance
             ?: return "I need the Accessibility permission turned on first."
 
@@ -21,18 +24,21 @@ class AgentRunner(
         }
 
         delay(1800)
+        progress("02/08  •  Opening WhatsApp Search")
 
         if (!service.tapSearchControl()) {
             return "I couldn't open WhatsApp Search, so I did not send the message."
         }
 
         delay(900)
+        progress("03/08  •  Searching: $recipient")
 
         if (!service.typeIntoWhatsAppSearch(recipient)) {
             return "I opened WhatsApp Search, but couldn't type the recipient name."
         }
 
         delay(1500)
+        progress("04/08  •  Opening matching chat")
 
         var opened = false
         repeat(4) {
@@ -48,6 +54,7 @@ class AgentRunner(
         }
 
         delay(1500)
+        progress("05/08  •  Verifying chat")
 
         val packageName = service.activePackageName().lowercase()
         val screenText = service.readScreenText()
@@ -64,17 +71,20 @@ class AgentRunner(
             delay(1200)
         }
 
+        progress("06/08  •  Typing message")
         if (!service.typeIntoWhatsAppComposer(message)) {
             return "I opened \"$recipient\", but couldn't type the message."
         }
 
         delay(600)
+        progress("07/08  •  Sending message")
 
         if (!service.tapWhatsAppSend()) {
             return "I typed the message, but couldn't find WhatsApp's Send button."
         }
 
         delay(1200)
+        progress("08/08  •  Verifying sent message")
 
         val afterSend = service.readScreenText()
         return if (afterSend.contains(message, ignoreCase = true)) {
@@ -99,6 +109,7 @@ class AgentRunner(
         var consecutiveFailures = 0
 
         repeat(maxSteps) {
+            progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Reading screen")
             val bitmap = captureScreenshotSuspend(service)
                 ?: return "I couldn't capture the screen to see what's happening."
             val base64 = bitmapToBase64(bitmap)
@@ -166,6 +177,7 @@ class AgentRunner(
             when (normalizedAction) {
                 "open_app" -> {
                     val app = json.optString("app")
+                    progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Opening " + app)
                     if (!commands.openApp(app)) {
                         consecutiveFailures++
                         actionsTaken.add("failed to open $app")
@@ -180,6 +192,7 @@ class AgentRunner(
                     delay(700)
                 }
                 "tap" -> {
+                    progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Tapping target")
                     val x = json.optDouble("x", -1.0).toFloat()
                     val y = json.optDouble("y", -1.0).toFloat()
                     if (x !in 0f..width.toFloat() || y !in 0f..height.toFloat() || !service.tapAt(x, y)) {
@@ -196,6 +209,7 @@ class AgentRunner(
                     delay(600)
                 }
                 "type" -> {
+                    progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Entering text")
                     val x = json.optDouble("x", -1.0).toFloat()
                     val y = json.optDouble("y", -1.0).toFloat()
                     val text = json.optString("text")
@@ -232,6 +246,7 @@ class AgentRunner(
                     delay(700)
                 }
                 "send" -> {
+                    progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Pressing Send")
                     if (!service.tapByText("send")) {
                         consecutiveFailures++
                         actionsTaken.add("failed to press Send")
@@ -246,6 +261,7 @@ class AgentRunner(
                     delay(1200)
                 }
                 "scroll" -> {
+                    progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Scrolling")
                     if (!service.scrollDown()) {
                         consecutiveFailures++
                         actionsTaken.add("failed to scroll")
@@ -260,6 +276,7 @@ class AgentRunner(
                     delay(700)
                 }
                 "back" -> {
+                    progress("STEP " + (actionsTaken.size + 1) + "/" + maxSteps + "  •  Going back")
                     if (!service.pressBack()) {
                         consecutiveFailures++
                         actionsTaken.add("failed to press back")
@@ -274,6 +291,7 @@ class AgentRunner(
                     delay(700)
                 }
                 "done" -> {
+                    progress("VERIFYING  •  Checking task completion")
                     val summary = json.optString("summary", "Done.")
                     if (verifyCompletion(instruction, service, actionsTaken)) {
                         return summary
@@ -567,12 +585,16 @@ class AgentRunner(
                     actionsTaken.add("agent claimed done, but verification failed")
                     delay(700)
                 }
-                else -> return "I wasn't sure how to continue, so I stopped."
+                else -> {
+                    actionsTaken.add("unsupported agent action")
+                    delay(500)
+                    return@repeat
+                }
             }
 
             delay(1200)
         }
 
-        return "I tried several steps but couldn't finish that fully - want me to keep going?"
+        return "I couldn't complete that command. Please try saying it another way."
     }
 }
