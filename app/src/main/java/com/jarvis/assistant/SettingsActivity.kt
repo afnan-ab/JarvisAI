@@ -78,19 +78,40 @@ class SettingsActivity : AppCompatActivity() {
         langEnglish.setOnClickListener { settings.setRecognitionLang("en-IN") }
         langHindi.setOnClickListener { settings.setRecognitionLang("hi-IN") }
 
+        findViewById<Button>(R.id.presetCinematic).setOnClickListener {
+            settings.saveProfile("cinematic")
+            pitchSlider.progress = 22
+            rateSlider.progress = 36
+            pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
+            rateLabel.text = "Speed: ${(currentRate() * 100).toInt()}%"
+            persistAndApply()
+        }
+
         findViewById<Button>(R.id.presetDeep).setOnClickListener {
+            settings.saveProfile("deep")
             pitchSlider.progress = 30; rateSlider.progress = 40
             pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
             rateLabel.text = "Speed: ${(currentRate() * 100).toInt()}%"
             persistAndApply()
         }
+        findViewById<Button>(R.id.presetNeutral).setOnClickListener {
+            settings.saveProfile("neutral")
+            pitchSlider.progress = 38
+            rateSlider.progress = 46
+            pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
+            rateLabel.text = "Speed: ${(currentRate() * 100).toInt()}%"
+            persistAndApply()
+        }
+
         findViewById<Button>(R.id.presetWarm).setOnClickListener {
+            settings.saveProfile("warm")
             pitchSlider.progress = 50; rateSlider.progress = 50
             pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
             rateLabel.text = "Speed: ${(currentRate() * 100).toInt()}%"
             persistAndApply()
         }
         findViewById<Button>(R.id.presetBright).setOnClickListener {
+            settings.saveProfile("bright")
             pitchSlider.progress = 65; rateSlider.progress = 60
             pitchLabel.text = "Pitch: ${(currentPitch() * 100).toInt()}%"
             rateLabel.text = "Speed: ${(currentRate() * 100).toInt()}%"
