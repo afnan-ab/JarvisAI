@@ -585,16 +585,12 @@ class AgentRunner(
                     actionsTaken.add("agent claimed done, but verification failed")
                     delay(700)
                 }
-                else -> {
-                    actionsTaken.add("unsupported agent action")
-                    delay(500)
-                    return@repeat
-                }
+                else -> return "I wasn't sure how to continue, so I stopped."
             }
 
             delay(1200)
         }
 
-        return "I couldn't complete that command. Please try saying it another way."
+        return "I tried several steps but couldn't finish that fully - want me to keep going?"
     }
 }
