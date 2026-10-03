@@ -168,7 +168,6 @@ class MainActivity : AppCompatActivity() {
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
         promptOverlayPermissionIfNeeded()
-        startWakeServiceIfReady()
         intent.getStringExtra("routine")?.let { executeRoutine(it) }
     }
 
@@ -620,35 +619,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshMoodLabel() {
         findViewById<TextView>(R.id.moodLabel).text = emotion.moodDescriptor()
-        updateSystemHud()
-    }
-
-    private fun updateSystemHud() {
-        val batteryView = findViewById<TextView>(R.id.systemChip) ?: return
-        val battery = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val level = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val percent = if (level >= 0 && scale > 0) level * 100 / scale else null
-
-        val cm = getSystemService(CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        val network = cm.activeNetwork
-        val caps = network?.let { cm.getNetworkCapabilities(it) }
-        val link = when {
-            caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true -> "WIFI"
-            caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "CELL"
-            network != null -> "NET"
-            else -> "OFF"
-        }
-
-        batteryView.text = if (percent != null) {
-            "●  ONLINE  •  " + percent + "%  •  " + link
-        } else {
-            "●  ONLINE  •  " + link
-        }
-
-        findViewById<TextView>(R.id.greetingLabel)?.text =
-            "PERSONAL AI SYSTEM   //   " + link + " LINK   //   BATTERY " +
-                (percent?.let { it.toString() + "%" } ?: "--")
     }
 
     private fun requestPermissionsIfNeeded() {
@@ -676,23 +646,6 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1001) startWakeServiceIfReady()
-    }
-
-    private fun startWakeServiceIfReady() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
-        if (!Settings.canDrawOverlays(this)) return
-
-        try {
-            val wakeIntent = Intent(this, WakeWordService::class.java)
-            ContextCompat.startForegroundService(this, wakeIntent)
-        } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                "Wake mode could not start. Open JARVIS once and try again.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
     }
 
     private fun promptOverlayPermissionIfNeeded() {
