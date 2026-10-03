@@ -176,8 +176,8 @@ class WakeWordService : Service() {
         val remainder = heard.substring(index + WAKE_WORD.length).trim()
         showOverlay()
         if (remainder.isBlank()) {
-            setOverlayState("LISTENING", "YES?  •  I'M LISTENING")
-            voice?.speak("Yes?") {
+            setOverlayState("LISTENING", "HAAN BHAI  •  BOL, MAIN SUN RAHA HOON")
+            voice?.speak("Haan bhai, bol kya scene hai?") {
                 handler.post { startCommandListening() }
             }
         } else {
