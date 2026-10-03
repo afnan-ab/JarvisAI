@@ -109,7 +109,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.testVoiceButton).setOnClickListener {
-            voice.speak("This is how I sound. यह मेरी आवाज़ है।")
+            voice.speak("Oye bhai! Main JARVIS hoon. Kya haal hai? Bol, kya karna hai? 😄")
         }
     }
 
