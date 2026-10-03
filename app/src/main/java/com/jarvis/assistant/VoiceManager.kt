@@ -63,6 +63,7 @@ class VoiceManager(
             "bright" -> 1.14f
             "friendly" -> 0.88f
             "cinematic", "british" -> 0.78f
+            "friendly" -> 0.92f
             else -> settings.getPitch()
         }
         val profileRate = when (profile) {
@@ -72,14 +73,12 @@ class VoiceManager(
             "bright" -> 1.04f
             "friendly" -> 0.96f
             "cinematic", "british" -> 0.88f
+            "friendly" -> 0.96f
             else -> settings.getRate()
         }
-        val wantMale = when (profile) {
-            "warm", "bright" -> false
-            else -> true
-        }
+        val wantMale = true
         val localeVoices = tts?.voices.orEmpty().filter {
-            it.locale.language == "en" && !it.isNetworkConnectionRequired
+            it.locale.language in listOf("en", "hi") && !it.isNetworkConnectionRequired
         }
         val preferredLocale = if (profile == "british") "GB" else "IN"
         val preferredLocaleVoices = localeVoices.filter { it.locale.country.equals(preferredLocale, ignoreCase = true) }
