@@ -171,15 +171,6 @@ class MainActivity : AppCompatActivity() {
         voice.stopListening()
     }
 
-    private fun startPulse() {
-        pulseAnimator?.cancel()
-        pulseAnimator = ObjectAnimator.ofFloat(orb, "alpha", 0.7f, 1f, 0.7f).apply {
-            duration = 2200
-            repeatCount = ObjectAnimator.INFINITE
-            start()
-        }
-    }
-
     private fun setOrbState(state: String) {
         val core = findViewById<TextView>(R.id.waveform)
         val telemetry = findViewById<TextView>(R.id.coreTelemetry)
