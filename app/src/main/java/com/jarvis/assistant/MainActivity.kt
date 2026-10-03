@@ -97,6 +97,9 @@ class MainActivity : AppCompatActivity() {
             onListenEnd = { setOrbState("calm") }
         )
         voice.init()
+        Handler(Looper.getMainLooper()).postDelayed({
+            voice.speak("Oye bhai! Kya haal hai? Kuch kaam hai, ya bas time-pass karne aaye ho?")
+        }, 900)
 
         val recycler = findViewById<RecyclerView>(R.id.chatRecycler)
         adapter = ChatAdapter(messages)
