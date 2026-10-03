@@ -9,7 +9,10 @@ class VoiceSettings(context: Context) {
     fun getRate(): Float = prefs.getFloat("rate", 0.95f)
     fun getPreferMale(): Boolean = prefs.getBoolean("prefer_male", true)
     fun getRecognitionLang(): String = prefs.getString("recognition_lang", "auto") ?: "auto"
-    fun getProfile(): String = prefs.getString("voice_profile", "cinematic") ?: "cinematic"
+    fun getProfile(): String {
+        val saved = prefs.getString("voice_profile", null)
+        return if (saved == null || saved == "cinematic") "friendly" else saved
+    }
     fun isCompanionEnabled(): Boolean = prefs.getBoolean("companion_enabled", false)
 
 
