@@ -1,7 +1,6 @@
 package com.jarvis.assistant
 
 import android.Manifest
-import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -13,6 +12,8 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -20,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,6 +37,11 @@ class MainActivity : AppCompatActivity() {
     private var pendingSecureScreenTask: String? = null
     private lateinit var micButton: ImageButton
     private lateinit var stateLabel: TextView
+    private lateinit var stateHint: TextView
+    private val hudHandler = Handler(Looper.getMainLooper())
+    private var waveformRunning = false
+    @Volatile private var taskRunning = false
+    private var pcClient: PcControlClient? = null
 
     private lateinit var adapter: ChatAdapter
     private val messages = mutableListOf<ChatMessage>()
@@ -63,9 +70,22 @@ class MainActivity : AppCompatActivity() {
         commands = CommandProcessor(this)
         security = SecuritySettings(this)
         api = GroqApiClient(apiKey)
-        agent = AgentRunner(api, commands)
+        agent = AgentRunner(api, commands) { message ->
+            runOnUiThread {
+                stateHint.text = message
+                findViewById<TextView>(R.id.taskProgressText).text = message
+                findViewById<TextView>(R.id.listeningIndicator).text = "▮▮▮  $message"
+                val match = Regex("""(?:STEP |)(\\d+)/(\\d+)""").find(message)
+                if (match != null) {
+                    val current = match.groupValues[1].toIntOrNull() ?: 0
+                    val total = match.groupValues[2].toIntOrNull() ?: 1
+                    findViewById<android.widget.ProgressBar>(R.id.taskProgressBar).progress = (current * 100 / total).coerceIn(0, 100)
+                }
+            }
+        }
 
         stateLabel = findViewById(R.id.stateLabel)
+        stateHint = findViewById(R.id.stateHint)
 
         voice = VoiceManager(
             this,
@@ -122,6 +142,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.settingsQuickButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+
+        findViewById<TextView>(R.id.historyQuickButton).setOnClickListener {
+            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "history"))
+        }
+
+        findViewById<TextView>(R.id.memoryQuickButton).setOnClickListener {
+            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "memory"))
+        }
         refreshMoodLabel()
 
         sendButton.setOnClickListener {
@@ -140,6 +168,8 @@ class MainActivity : AppCompatActivity() {
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
         promptOverlayPermissionIfNeeded()
+        startWakeServiceIfReady()
+        intent.getStringExtra("routine")?.let { executeRoutine(it) }
     }
 
     private fun showOverLockScreen() {
@@ -159,41 +189,154 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        intent.getStringExtra("routine")?.let { executeRoutine(it) }
     }
 
-    override fun onResume() {
-        super.onResume()
-        voice.applySettings()
-    }
+    private fun executeRoutine(name: String) {
+        val commandsToRun = RoutineStore(this).get(name)
+        if (commandsToRun.isEmpty()) {
+            stateHint.text = "ROUTINE NOT FOUND  •  " + name
+            return
+        }
 
-    override fun onPause() {
-        super.onPause()
-        voice.stopListening()
+        setOrbState("thinking")
+        lifecycleScope.launch {
+            for ((index, command) in commandsToRun.withIndex()) {
+                stateHint.text = "ROUTINE  •  " + (index + 1) + "/" + commandsToRun.size + "\n" + command
+                findViewById<TextView>(R.id.taskProgressText).text =
+                    "ROUTINE  •  " + (index + 1) + "/" + commandsToRun.size + "  •  " + command
+                findViewById<android.widget.ProgressBar>(R.id.taskProgressBar).progress =
+                    (index * 100 / commandsToRun.size).coerceIn(0, 100)
+
+                taskRunning = false
+                handleUserInput(command)
+
+                while (taskRunning) {
+                    delay(150)
+                }
+                delay(700)
+            }
+
+            findViewById<android.widget.ProgressBar>(R.id.taskProgressBar).progress = 100
+            findViewById<TextView>(R.id.taskProgressText).text =
+                "ROUTINE COMPLETE  •  " + commandsToRun.size + "/" + commandsToRun.size + " STEPS"
+            stateHint.text = "ROUTINE COMPLETE\n" + name
+            setOrbState("calm")
+            val reply = "Routine " + name + " completed."
+            appendMessage(reply, false)
+            voice.speak(reply)
+        }
     }
 
     private fun setOrbState(state: String) {
         val core = findViewById<TextView>(R.id.waveform)
+        val face = findViewById<TextView>(R.id.coreFace)
         val telemetry = findViewById<TextView>(R.id.coreTelemetry)
         when (state) {
             "listening" -> {
                 stateLabel.text = "●  LISTENING"
-                core.text = "▁▅█▇▅█▇█▅▇█▅▁"
-                core.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+                face.text = "◉‿◉"
                 telemetry.text = "MIC LINK  •  VOICE INPUT  •  ACTIVE"
+                stateHint.text = "LIVE AUDIO  •  Speak your command..."
                 micButton.setBackgroundResource(R.drawable.mic_bg_active)
+                startReactiveWave(core, true)
             }
             "thinking" -> {
                 stateLabel.text = "●  PROCESSING"
-                core.text = "▃▅▇█▇▅▃  ▅▇█▇▅  ▃▅▇█"
-                telemetry.text = "NEURAL LINK  •  PROCESSING  •  PLEASE WAIT"
+                face.text = "◉_◉"
+                telemetry.text = "NEURAL LINK  •  LIVE TASK EXECUTION"
+                stateHint.text = "PROCESSING  •  JARVIS is working..."
+                startReactiveWave(core, false)
             }
             else -> {
                 stateLabel.text = "●  SYSTEM ONLINE"
+                face.text = "◉‿◉"
                 core.text = "▁▃▅▇▅▃▁  ▂▅▇█▇▅▂  ▁▃▆█▆▃▁"
                 telemetry.text = "VOICE LINK  •  AI READY  •  100%"
+                stateHint.text = "JARVIS READY\nAwaiting your command..."
                 micButton.setBackgroundResource(R.drawable.mic_bg)
+                stopReactiveWave()
             }
         }
+    }
+
+    private fun startReactiveWave(core: TextView, listening: Boolean) {
+        stopReactiveWave()
+        waveformRunning = true
+        val frames = if (listening) arrayOf(
+            "▁▃▅▇█▇▅▃▁  ▂▅▇█▇▅▂  ▁▃▆█▆▃▁",
+            "▂▅█▇▃▆█▅▂  ▃▇█▅▇▃  ▂▆█▇▅▂",
+            "▁▆█▅▇█▃▅▁  ▅█▇▃▇█▅  ▁▅▇█▆▃▁",
+            "▃▇█▆▂▅█▇▃  ▇█▅▃▅█▇  ▃▆█▇▅▂▁"
+        ) else arrayOf(
+            "▂▅▇█▇▅▂  ▃▆█▇▆▃  ▂▅▇█▇▅▂",
+            "▃▇█▇▃  ▅█▇█▅  ▃▇█▇▃  ▅█",
+            "▁▅█▆▃  ▂▇█▇▂  ▃▆█▅  ▂▇█▆▁",
+            "▂▆█▇▅▂  ▅█▇▅█▅  ▂▆█▇▃"
+        )
+        var index = 0
+        val tick = object : Runnable {
+            override fun run() {
+                if (!waveformRunning) return
+                core.text = frames[index++ % frames.size]
+                hudHandler.postDelayed(this, 120L)
+            }
+        }
+        hudHandler.post(tick)
+    }
+
+    private fun stopReactiveWave() {
+        waveformRunning = false
+        hudHandler.removeCallbacksAndMessages(null)
+    }
+
+    private fun looksLikePcTask(text: String): Boolean {
+        val t = text.lowercase()
+        return t.contains(" on pc") || t.contains(" on my computer") ||
+            t.contains("computer par") || t.contains("pc par")
+    }
+
+    private fun runPcTask(text: String): Boolean {
+        if (!looksLikePcTask(text)) return false
+        val prefs = getSharedPreferences("jarvis_pc", MODE_PRIVATE)
+        val host = prefs.getString("host", "").orEmpty()
+        val token = prefs.getString("token", "").orEmpty()
+        if (host.isBlank() || token.isBlank()) {
+            val reply = "PC Link is not configured yet. Open PC Link from the JARVIS menu and pair your computer first."
+            appendMessage(reply, false)
+            voice.speak(reply)
+            startActivity(Intent(this, HudScreenActivity::class.java).putExtra("screen", "pc"))
+            return true
+        }
+
+        val t = text.lowercase()
+        val action = when {
+            t.contains("browser") || t.contains("chrome") -> "browser"
+            t.contains("calculator") || t.contains("calc") -> "calculator"
+            t.contains("terminal") || t.contains("cmd") -> "terminal"
+            else -> null
+        }
+        if (action == null) {
+            val reply = "PC Link is ready, but I only have safe browser, calculator and terminal launch commands configured right now."
+            appendMessage(reply, false)
+            voice.speak(reply)
+            return true
+        }
+
+        setOrbState("thinking")
+        pcClient?.disconnect()
+        pcClient = PcControlClient { msg -> stateHint.text = msg }
+        pcClient?.connect(host, token) {
+            pcClient?.send("open_app", action)
+            runOnUiThread {
+                val reply = "Opening $action on your PC."
+                appendMessage(reply, false)
+                memory.addTurn("assistant", reply)
+                voice.speak(reply)
+                setOrbState("calm")
+            }
+        }
+        return true
     }
 
     private fun looksLikeScreenTask(text: String): Boolean {
@@ -307,12 +450,14 @@ class MainActivity : AppCompatActivity() {
         setOrbState("thinking")
         appendMessage("Opening WhatsApp Search for $recipient...", isUser = false)
 
+        taskRunning = true
         lifecycleScope.launch {
             val summary = try {
                 agent.runWhatsAppMessage(recipient, message)
             } catch (e: Exception) {
                 "I ran into an error: " + e.message
             }
+            taskRunning = false
             setOrbState("calm")
             appendMessage(summary, isUser = false)
             memory.addTurn("assistant", summary)
@@ -332,12 +477,14 @@ class MainActivity : AppCompatActivity() {
 
         setOrbState("thinking")
         appendMessage("Working on it...", isUser = false)
+        taskRunning = true
         lifecycleScope.launch {
             val summary = try {
                 agent.run(text)
             } catch (e: Exception) {
                 "I ran into an error: " + e.message
             }
+            taskRunning = false
             setOrbState("calm")
             appendMessage(summary, isUser = false)
             memory.addTurn("assistant", summary)
@@ -383,6 +530,8 @@ class MainActivity : AppCompatActivity() {
         memory.addTurn("user", text)
         emotion.registerUserMessage(text)
         refreshMoodLabel()
+
+        if (runPcTask(text)) return
 
         // Handle Android settings targets deterministically instead of asking the visual agent
         // to navigate system Settings by coordinates.
@@ -471,6 +620,35 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshMoodLabel() {
         findViewById<TextView>(R.id.moodLabel).text = emotion.moodDescriptor()
+        updateSystemHud()
+    }
+
+    private fun updateSystemHud() {
+        val batteryView = findViewById<TextView>(R.id.systemChip) ?: return
+        val battery = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val level = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val percent = if (level >= 0 && scale > 0) level * 100 / scale else null
+
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = cm.activeNetwork
+        val caps = network?.let { cm.getNetworkCapabilities(it) }
+        val link = when {
+            caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true -> "WIFI"
+            caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "CELL"
+            network != null -> "NET"
+            else -> "OFF"
+        }
+
+        batteryView.text = if (percent != null) {
+            "●  ONLINE  •  " + percent + "%  •  " + link
+        } else {
+            "●  ONLINE  •  " + link
+        }
+
+        findViewById<TextView>(R.id.greetingLabel)?.text =
+            "PERSONAL AI SYSTEM   //   " + link + " LINK   //   BATTERY " +
+                (percent?.let { it.toString() + "%" } ?: "--")
     }
 
     private fun requestPermissionsIfNeeded() {
@@ -498,11 +676,28 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001) startWakeServiceIfReady()
+    }
+
+    private fun startWakeServiceIfReady() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
+        if (!Settings.canDrawOverlays(this)) return
+
+        try {
+            val wakeIntent = Intent(this, WakeWordService::class.java)
+            ContextCompat.startForegroundService(this, wakeIntent)
+        } catch (_: Exception) {
+            Toast.makeText(
+                this,
+                "Wake mode could not start. Open JARVIS once and try again.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun promptOverlayPermissionIfNeeded() {
         if (!android.provider.Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "Enable \"Display over other apps\" for the floating Jarvis bubble to work.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Enable \"Display over other apps\" so JARVIS can present its assistant HUD.", Toast.LENGTH_LONG).show()
             val intent = Intent(
                 android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 android.net.Uri.parse("package:$packageName")
