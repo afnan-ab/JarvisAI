@@ -62,9 +62,30 @@ class CommandProcessor(private val context: Context) {
         // Keep simple greetings local so they never fall through to the vision agent.
         when (t) {
             "hi", "hello", "hey", "hii", "helo", "good morning", "good afternoon", "good evening" ->
-                return Result.Handled("Hello. I am JARVIS. How can I help?")
+                return Result.Handled("Oye bhai! Kya haal hai? Kuch kaam hai ya bas time-pass karne aaye ho?")
             "how are you", "how are you doing" ->
-                return Result.Handled("I am online and ready.")
+                return Result.Handled("Main badhiya hoon bhai. Tu bata, kya scene hai?")
+            "jarvis kya hai", "what are you doing", "kya kar raha hai" ->
+                return Result.Handled("Main yahin hoon bhai. Kuch kaam hai ya bas time-pass karne aaye ho?")
+        }
+
+        if (
+            t == "any notification" || t == "any notifications" ||
+            t.contains("kisi ka message aaya") ||
+            t.contains("kisi ka msg aaya") ||
+            t.contains("message aaya tha") ||
+            t.contains("notification aayi") ||
+            t.contains("notification aaya") ||
+            t.contains("what message came") ||
+            t.contains("who messaged me") ||
+            t.contains("who sent me a message") ||
+            t.contains("recent notification")
+        ) {
+            val summary = JarvisNotificationListener.recentSummary()
+            return Result.Handled(
+                if (summary == "No recent notifications.") "Nahi bhai, mujhe koi recent notification nahi mili."
+                else "Haan bhai, recent notifications ye hain: $summary"
+            )
         }
 
         if (t.contains("battery")) {
