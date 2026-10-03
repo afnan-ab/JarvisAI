@@ -6,6 +6,9 @@ import android.widget.RadioButton
 import android.widget.SeekBar
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Switch
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
@@ -31,6 +34,27 @@ class SettingsActivity : AppCompatActivity() {
         val langAuto = findViewById<RadioButton>(R.id.langAuto)
         val langEnglish = findViewById<RadioButton>(R.id.langEnglish)
         val langHindi = findViewById<RadioButton>(R.id.langHindi)
+        val companionSwitch = findViewById<Switch>(R.id.companionSwitch)
+        companionSwitch.isChecked = settings.isCompanionEnabled()
+        companionSwitch.setOnCheckedChangeListener { _, enabled ->
+            settings.setCompanionEnabled(enabled)
+            if (enabled) {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    try {
+                        androidx.core.content.ContextCompat.startForegroundService(this, Intent(this, WakeWordService::class.java).setAction(WakeWordService.ACTION_START))
+                    } catch (_: Exception) {
+                        companionSwitch.isChecked = false
+                        settings.setCompanionEnabled(false)
+                    }
+                } else {
+                    companionSwitch.isChecked = false
+                    settings.setCompanionEnabled(false)
+                    androidx.core.app.ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECORD_AUDIO), 401)
+                }
+            } else {
+                stopService(Intent(this, WakeWordService::class.java))
+            }
+        }
 
         val savedPitch = settings.getPitch()
         val savedRate = settings.getRate()
