@@ -168,7 +168,22 @@ class MainActivity : AppCompatActivity() {
         requestPermissionsIfNeeded()
         maybePromptAccessibilityService()
         promptOverlayPermissionIfNeeded()
+        startCompanionIfEnabled()
         intent.getStringExtra("routine")?.let { executeRoutine(it) }
+    }
+
+    private fun startCompanionIfEnabled() {
+        val voiceSettings = VoiceSettings(this)
+        if (!voiceSettings.isCompanionEnabled()) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
+        try {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, WakeWordService::class.java).setAction(WakeWordService.ACTION_START)
+            )
+        } catch (_: Exception) {
+            // Companion Mode is opt-in; a service start failure must not affect the main app.
+        }
     }
 
     private fun showOverLockScreen() {
