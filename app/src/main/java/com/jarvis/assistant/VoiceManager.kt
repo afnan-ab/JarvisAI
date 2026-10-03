@@ -61,6 +61,7 @@ class VoiceManager(
             "neutral" -> 0.88f
             "warm" -> 1.02f
             "bright" -> 1.14f
+            "friendly" -> 0.88f
             "cinematic", "british" -> 0.78f
             else -> settings.getPitch()
         }
@@ -69,6 +70,7 @@ class VoiceManager(
             "neutral" -> 0.96f
             "warm" -> 0.92f
             "bright" -> 1.04f
+            "friendly" -> 0.96f
             "cinematic", "british" -> 0.88f
             else -> settings.getRate()
         }
