@@ -10,6 +10,7 @@ class VoiceSettings(context: Context) {
     fun getPreferMale(): Boolean = prefs.getBoolean("prefer_male", true)
     fun getRecognitionLang(): String = prefs.getString("recognition_lang", "auto") ?: "auto"
     fun getProfile(): String = prefs.getString("voice_profile", "cinematic") ?: "cinematic"
+    fun isCompanionEnabled(): Boolean = prefs.getBoolean("companion_enabled", false)
 
 
     fun save(pitch: Float, rate: Float, preferMale: Boolean) {
@@ -26,5 +27,9 @@ class VoiceSettings(context: Context) {
 
     fun saveProfile(profile: String) {
         prefs.edit().putString("voice_profile", profile).apply()
+    }
+
+    fun setCompanionEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("companion_enabled", enabled).apply()
     }
 }
