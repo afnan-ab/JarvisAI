@@ -97,7 +97,7 @@ class WakeWordService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!destroyed && !wakeDisabled && !wakeStartInProgress && !listeningForCommand) {
+        if (!destroyed && VoiceSettings(this).isCompanionEnabled() && !wakeDisabled && !wakeStartInProgress && !listeningForCommand) {
             startWakeListening()
         }
         return START_NOT_STICKY
