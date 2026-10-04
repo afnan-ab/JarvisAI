@@ -77,7 +77,7 @@ class WakeWordService : Service() {
         super.onCreate()
         try {
             createChannel()
-            startForeground(NOTIFICATION_ID, buildNotification())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) } else { startForeground(NOTIFICATION_ID, buildNotification()) }
             memory = MemoryStore(this)
             emotion = EmotionEngine(memory)
             commands = CommandProcessor(this)
@@ -125,7 +125,7 @@ class WakeWordService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentTitle("JARVIS is ready")
-            .setContentText("Say “Jarvis” to open the compact HUD.")
+            .setContentText("Say “Jarvis” to talk to your friendly JARVIS.")
             .setContentIntent(openIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -190,7 +190,7 @@ class WakeWordService : Service() {
         wakeListening = false
         listeningForCommand = true
         showOverlay()
-        setOverlayState("LISTENING", "SPEAK NOW  •  SILENT LOCAL VOICE")
+        setOverlayState("LISTENING", "BOL BHAI  •  MAIN SUN RAHA HOON")
 
         voskEngine?.startCommand(object : VoskWakeEngine.Listener {
             override fun onWake() {}
