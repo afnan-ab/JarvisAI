@@ -63,6 +63,7 @@ class VoiceManager(
             "bright" -> 1.14f
             "friendly" -> 0.92f
             "cinematic", "british" -> 0.78f
+            "friendly" -> 0.92f
             else -> settings.getPitch()
         }
         val profileRate = when (profile) {
@@ -71,7 +72,8 @@ class VoiceManager(
             "warm" -> 0.92f
             "bright" -> 1.04f
             "friendly" -> 0.96f
-            "cinematic", "british" -> 0.88f
+            "cinematic", "british" -> 0.94f
+            "friendly" -> 0.98f
             else -> settings.getRate()
         }
         val wantMale = true
