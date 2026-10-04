@@ -59,21 +59,21 @@ class VoiceManager(
         val profile = settings.getProfile()
         val profilePitch = when (profile) {
             "friendly" -> 0.94f
-            "deep" -> 0.72f
-            "neutral" -> 0.88f
-            "warm" -> 1.02f
-            "bright" -> 1.14f
+            "deep" -> 0.82f
+            "neutral" -> 0.94f
+            "warm", "friendly" -> 0.98f
+            "bright" -> 1.08f
             "friendly" -> 0.92f
-            "cinematic", "british" -> 0.78f
+            "cinematic", "british" -> 0.90f
             "friendly" -> 0.92f
             else -> settings.getPitch()
         }
         val profileRate = when (profile) {
             "friendly" -> 1.00f
-            "deep" -> 0.88f
+            "deep" -> 0.90f
             "neutral" -> 0.96f
-            "warm" -> 0.92f
-            "bright" -> 1.04f
+            "warm", "friendly" -> 0.96f
+            "bright" -> 1.02f
             "friendly" -> 0.96f
             "cinematic", "british" -> 0.94f
             "friendly" -> 0.98f
@@ -174,6 +174,11 @@ class VoiceManager(
             // setLanguage() can switch the engine back to its locale default.
             // Re-apply the Indian JARVIS voice preference afterwards.
             if (configuredLocale?.language != locale.language || configuredLocale?.country != locale.country) applySettings()
+            val expressive = text.contains("!") || text.contains("bhai", ignoreCase = true) || text.contains("haha", ignoreCase = true)
+            if (expressive) {
+                tts?.setPitch((tts?.voice?.let { 0.98f } ?: 0.98f) + 0.04f)
+                tts?.setSpeechRate(0.98f)
+            }
             pendingDoneCallback = onDone
             val id = UUID.randomUUID().toString()
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
