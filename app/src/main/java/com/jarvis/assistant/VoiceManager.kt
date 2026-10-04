@@ -23,6 +23,7 @@ class VoiceManager(
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var configuredLocale: Locale? = null
     private val settings = VoiceSettings(context)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingDoneCallback: (() -> Unit)? = null
@@ -57,6 +58,7 @@ class VoiceManager(
     fun applySettings() {
         val profile = settings.getProfile()
         val profilePitch = when (profile) {
+            "friendly" -> 0.94f
             "deep" -> 0.72f
             "neutral" -> 0.88f
             "warm" -> 1.02f
@@ -67,6 +69,7 @@ class VoiceManager(
             else -> settings.getPitch()
         }
         val profileRate = when (profile) {
+            "friendly" -> 1.00f
             "deep" -> 0.88f
             "neutral" -> 0.96f
             "warm" -> 0.92f
@@ -101,6 +104,7 @@ class VoiceManager(
         genderVoice?.let { tts?.voice = it }
         tts?.setPitch(profilePitch)
         tts?.setSpeechRate(profileRate)
+        configuredLocale = if (profile == "british") Locale("en", "GB") else Locale("en", "IN")
     }
 
     private fun containsDevanagari(text: String): Boolean = text.any { it.code in 0x0900..0x097F }
@@ -169,7 +173,7 @@ class VoiceManager(
             }
             // setLanguage() can switch the engine back to its locale default.
             // Re-apply the Indian JARVIS voice preference afterwards.
-            applySettings()
+            if (configuredLocale?.language != locale.language || configuredLocale?.country != locale.country) applySettings()
             pendingDoneCallback = onDone
             val id = UUID.randomUUID().toString()
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
