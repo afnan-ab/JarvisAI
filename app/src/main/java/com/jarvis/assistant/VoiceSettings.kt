@@ -5,16 +5,12 @@ import android.content.Context
 class VoiceSettings(context: Context) {
     private val prefs = context.getSharedPreferences("jarvis_voice", Context.MODE_PRIVATE)
 
-    fun getPitch(): Float = prefs.getFloat("pitch", 0.85f)
-    fun getRate(): Float = prefs.getFloat("rate", 0.95f)
+    fun getPitch(): Float = prefs.getFloat("pitch", 0.96f)
+    fun getRate(): Float = prefs.getFloat("rate", 0.96f)
     fun getPreferMale(): Boolean = prefs.getBoolean("prefer_male", true)
     fun getRecognitionLang(): String = prefs.getString("recognition_lang", "auto") ?: "auto"
-    fun getProfile(): String {
-        val saved = prefs.getString("voice_profile", null)
-        return if (saved == null || saved == "cinematic") "friendly" else saved
-    }
+    fun getProfile(): String = prefs.getString("voice_profile", "friendly") ?: "friendly"
     fun isCompanionEnabled(): Boolean = prefs.getBoolean("companion_enabled", false)
-
 
     fun save(pitch: Float, rate: Float, preferMale: Boolean) {
         prefs.edit()
